@@ -16,18 +16,16 @@ SRC_URI[bcf.sha256sum] = "e403764730aa149e78874135da154bab2a24574308d3f2df88c9b4
 S = "${WORKDIR}"
 
 do_install() {
-	install -d ${D}/lib/firmware/
-	install -m 0644 ${S}/lib/firmware/morse/mm6108.bin ${D}/lib/firmware/mm6108.bin
-	install -m 0644 ${S}/lib/firmware/morse/bcf_mf08651_us.bin ${D}/lib/firmware/${BCF_FILENAME}
-	
+	install -d ${D}/lib/firmware/morse
+	install -m 0644 ${S}/lib/firmware/morse/mm6108.bin ${D}/lib/firmware/morse/mm6108.bin
+	install -m 0644 ${S}/lib/firmware/morse/bcf_mf08651_us.bin ${D}/lib/firmware/morse/${BCF_FILENAME}
+
 	install -d ${D}${sysconfdir}/modprobe.d
 	echo "# Auto-generated configuration" > ${D}${sysconfdir}/modprobe.d/morse.conf
-    	echo "options morse country=${COUNTRY}" >> ${D}${sysconfdir}/modprobe.d/morse.conf
-    	echo "options morse bcf=/lib/firmware/${BCF_FILENAME}" >> ${D}${sysconfdir}/modprobe.d/morse.conf
+	echo "options morse country=${COUNTRY}" >> ${D}${sysconfdir}/modprobe.d/morse.conf
+	echo "options morse bcf=${BCF_FILENAME}" >> ${D}${sysconfdir}/modprobe.d/morse.conf
 }
 
 # Ignore warning about firmware not being ARM
 INSANE_SKIP:${PN} = "arch"
-FILES:${PN} += "/lib/firmware/${BCF_FILENAME} /lib/firmware/mm6108.bin"
-
-
+FILES:${PN} += "/lib/firmware/morse/${BCF_FILENAME} /lib/firmware/morse/mm6108.bin"

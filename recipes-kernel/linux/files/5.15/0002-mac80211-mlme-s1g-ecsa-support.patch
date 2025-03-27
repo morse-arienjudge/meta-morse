@@ -1,0 +1,72 @@
+From 847e73c8af53c9af1a835172af450e43b4f199c1 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Tue, 19 Nov 2024 12:20:06 +1100
+Subject: [PATCH 2/7] mac80211: mlme s1g ecsa support
+
+---
+ net/mac80211/chan.c |  5 -----
+ net/mac80211/mlme.c | 24 ++++++++++++++++++++++--
+ 2 files changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/net/mac80211/chan.c b/net/mac80211/chan.c
+index 63e15f583e0a..33ca0982ff2d 100644
+--- a/net/mac80211/chan.c
++++ b/net/mac80211/chan.c
+@@ -376,11 +376,6 @@ static void ieee80211_chan_bw_change(struct ieee80211_local *local,
+ 		if (new_sta_bw == sta->sta.bandwidth)
+ 			continue;
+ 
+-		/* vif changed to narrow BW and narrow BW for station wasn't
+-		 * requested or vise versa */
+-		if ((new_sta_bw < sta->sta.bandwidth) == !narrowed)
+-			continue;
+-
+ 		sta->sta.bandwidth = new_sta_bw;
+ 		rate_control_rate_update(local, sband, sta,
+ 					 IEEE80211_RC_BW_CHANGED);
+diff --git a/net/mac80211/mlme.c b/net/mac80211/mlme.c
+index cc6d38a2e6d5..8c09c881cdcc 100644
+--- a/net/mac80211/mlme.c
++++ b/net/mac80211/mlme.c
+@@ -1321,6 +1321,26 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
+ 
+ 	current_band = cbss->channel->band;
+ 	bss = (void *)cbss->priv;
++	if (elems->wide_bw_chansw_ie) {
++		struct ieee80211_supported_band *sband = ieee80211_get_sband(sdata);
++
++		/* if wide bw is included then we are moving to HT or VHT channels,
++		 * so enable modes accordingly
++		 */
++		if (sband->ht_cap.ht_supported && (ifmgd->flags &
++				(IEEE80211_STA_DISABLE_HT | IEEE80211_STA_DISABLE_40MHZ))) {
++			ifmgd->flags &= ~(IEEE80211_STA_DISABLE_HT | IEEE80211_STA_DISABLE_40MHZ);
++			sdata_info(sdata,"mac80211: %s: updated if flags=0x%x\n",__func__, ifmgd->flags);
++		}
++
++		if ((elems->wide_bw_chansw_ie->new_channel_width > IEEE80211_VHT_CHANWIDTH_USE_HT) &&
++					sband->vht_cap.vht_supported &&
++					(ifmgd->flags & (IEEE80211_STA_DISABLE_VHT | IEEE80211_STA_DISABLE_160MHZ))) {
++			ifmgd->flags &= ~(IEEE80211_STA_DISABLE_VHT | IEEE80211_STA_DISABLE_160MHZ);
++			sdata_info(sdata,"mac80211: %s: updated vht caps, if flags=0x%x\n",__func__, ifmgd->flags);
++		}
++	}
++
+ 	res = ieee80211_parse_ch_switch_ie(sdata, elems, current_band,
+ 					   bss->vht_cap_info,
+ 					   ifmgd->flags,
+@@ -1453,9 +1473,9 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
+ 	/* channel switch handled in software */
+ 	if (csa_ie.count <= 1)
+ 		ieee80211_queue_work(&local->hw, &ifmgd->chswitch_work);
+-	else
++	else /* consider short beacons time also */
+ 		mod_timer(&ifmgd->chswitch_timer,
+-			  TU_TO_EXP_TIME((csa_ie.count - 1) *
++			  TU_TO_EXP_TIME((csa_ie.count - 1) * sdata->vif.bss_conf.dtim_period *
+ 					 cbss->beacon_interval));
+ 	return;
+  lock_and_drop_connection:
+-- 
+2.25.1
+

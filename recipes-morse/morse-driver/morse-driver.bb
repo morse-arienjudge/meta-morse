@@ -14,13 +14,12 @@ B = "${S}"
 
 do_compile() {
 	bbnote $(pwd)
-	oe_runmake CONFIG_WLAN_VENDOR_MORSE=m CONFIG_MORSE_SDIO=y CONFIG_MORSE_USER_ACCESS=y CONFIG_MORSE_VENDOR_COMMAND=y
+	oe_runmake CONFIG_WLAN_VENDOR_MORSE=m CONFIG_MORSE_SDIO_ALIGNMENT=4 CONFIG_MORSE_SDIO=y CONFIG_MORSE_USER_ACCESS=y CONFIG_MORSE_VENDOR_COMMAND=y CONFIG_MORSE_ENABLE_TEST_MODES=y
 }
 
 do_install() {
 	install -d ${D}/lib/modules/${KERNEL_VERSION}/
-	
+
 	install -m 0644 morse.ko ${D}/lib/modules/${KERNEL_VERSION}/morse.ko
 	install -m 0644 dot11ah/dot11ah.ko ${D}/lib/modules/${KERNEL_VERSION}/dot11ah.ko
 }
-

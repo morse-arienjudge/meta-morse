@@ -1,0 +1,78 @@
+From cf5e37d21ba7a82963cfc7adb0d2625ac4f0f371 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Tue, 26 Nov 2024 18:15:57 +1100
+Subject: [PATCH 3/3] miscellani
+
+---
+ arch/arm/boot/dts/imx6ul-imx6ull-var-som-wifi.dtsi | 4 ++--
+ drivers/irqchip/irq-imx-irqsteer.c                 | 2 +-
+ drivers/mmc/host/sdhci-esdhc-imx.c                 | 4 ++--
+ drivers/mmc/host/sdhci-of-esdhc.c                  | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6ul-imx6ull-var-som-wifi.dtsi b/arch/arm/boot/dts/imx6ul-imx6ull-var-som-wifi.dtsi
+index b8b86aff8a11..7a4a70501900 100644
+--- a/arch/arm/boot/dts/imx6ul-imx6ull-var-som-wifi.dtsi
++++ b/arch/arm/boot/dts/imx6ul-imx6ull-var-som-wifi.dtsi
+@@ -73,8 +73,8 @@ &usdhc1 {
+ 	vmmc-supply = <&reg_sd1_vmmc>;
+ 	status = "okay";
+ 
+-	brcmf: bcrmf@1 {
++	mm6108: mm6108@1 {
+ 		reg = <1>;
+-		compatible = "brcm,bcm4329-fmac";
++		compatible = "morse,mm610x";
+ 	};
+ };
+diff --git a/drivers/irqchip/irq-imx-irqsteer.c b/drivers/irqchip/irq-imx-irqsteer.c
+index a5165579bed1..5552e9b059ef 100644
+--- a/drivers/irqchip/irq-imx-irqsteer.c
++++ b/drivers/irqchip/irq-imx-irqsteer.c
+@@ -191,7 +191,7 @@ static int imx_irqsteer_chans_enable(struct irqsteer_data *data)
+ {
+ 	int ret;
+ 
+-	ret = clk_prepare_enable(irqsteer_data->ipg_clk);
++	ret = clk_prepare_enable(data->ipg_clk);
+ 	if (ret) {
+ 		dev_err(data->dev, "failed to enable ipg clk: %d\n", ret);
+ 		return ret;
+diff --git a/drivers/mmc/host/sdhci-esdhc-imx.c b/drivers/mmc/host/sdhci-esdhc-imx.c
+index 4db77abca419..0a1606d9795b 100644
+--- a/drivers/mmc/host/sdhci-esdhc-imx.c
++++ b/drivers/mmc/host/sdhci-esdhc-imx.c
+@@ -1413,7 +1413,7 @@ static void sdhci_esdhc_imx_hwinit(struct sdhci_host *host)
+ 		 * erratum ESDHC_FLAG_ERR004536 fix for MX6Q TO1.2 and MX6DL
+ 		 * TO1.1, it's harmless for MX6SL
+ 		 */
+-		if (!is_s32v234_usdhc(imx_data))
++		// if (!is_s32v234_usdhc(imx_data))
+ 			writel(readl(host->ioaddr + 0x6c) & ~BIT(7),
+ 				host->ioaddr + 0x6c);
+ 
+@@ -1591,7 +1591,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
+ 
+ 	mmc_of_parse_voltage(host->mmc, &host->ocr_mask);
+ 
+-	if (!is_s32v234_usdhc(imx_data) && esdhc_is_usdhc(imx_data) 
++	if (!is_s32v234_usdhc(imx_data) && esdhc_is_usdhc(imx_data)
+ 					&& !IS_ERR(imx_data->pinctrl)) {
+ 		imx_data->pins_100mhz = pinctrl_lookup_state(imx_data->pinctrl,
+ 						ESDHC_PINCTRL_STATE_100MHZ);
+diff --git a/drivers/mmc/host/sdhci-of-esdhc.c b/drivers/mmc/host/sdhci-of-esdhc.c
+index 6b44daf4bcd4..2943cc5279b3 100644
+--- a/drivers/mmc/host/sdhci-of-esdhc.c
++++ b/drivers/mmc/host/sdhci-of-esdhc.c
+@@ -1025,7 +1025,7 @@ static void esdhc_prepare_sw_tuning(struct sdhci_host *host, u8 *window_start,
+ 	/* Reset data lines by setting ESDHCCTL[RSTD] */
+ 	sdhci_reset(host, SDHCI_RESET_DATA);
+ 	/* Write 32'hFFFF_FFFF to IRQSTAT register */
+-	sdhci_writel(host, 0xFFFFFFFF, SDHCI_INT_STATUS);
++	sdhci_writel(host, 0xFFEFFFFF, SDHCI_INT_STATUS); // E to disable data timeout errors
+ 
+ 	/* If TBSTAT[15:8]-TBSTAT[7:0] > (4 * div_ratio) + 2
+ 	 * or TBSTAT[7:0]-TBSTAT[15:8] > (4 * div_ratio) + 2,
+-- 
+2.25.1
+

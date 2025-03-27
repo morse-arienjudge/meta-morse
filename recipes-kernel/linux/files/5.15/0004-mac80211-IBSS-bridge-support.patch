@@ -1,0 +1,40 @@
+From 9b785f86d3cfca7f46ee0f09711ea488efd35035 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Tue, 19 Nov 2024 12:20:58 +1100
+Subject: [PATCH 4/7] mac80211: IBSS bridge support
+
+---
+ net/wireless/core.c | 4 ++--
+ net/wireless/util.c | 1 -
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/net/wireless/core.c b/net/wireless/core.c
+index 441136646f89..6792225cc00e 100644
+--- a/net/wireless/core.c
++++ b/net/wireless/core.c
+@@ -1299,8 +1299,8 @@ void cfg80211_init_wdev(struct wireless_dev *wdev)
+ 	wdev->ps_timeout = -1;
+ 
+ 	if ((wdev->iftype == NL80211_IFTYPE_STATION ||
+-	     wdev->iftype == NL80211_IFTYPE_P2P_CLIENT ||
+-	     wdev->iftype == NL80211_IFTYPE_ADHOC) && !wdev->use_4addr)
++	     wdev->iftype == NL80211_IFTYPE_P2P_CLIENT) &&
++        !wdev->use_4addr)
+ 		wdev->netdev->priv_flags |= IFF_DONT_BRIDGE;
+ 
+ 	INIT_WORK(&wdev->disconnect_wk, cfg80211_autodisconnect_wk);
+diff --git a/net/wireless/util.c b/net/wireless/util.c
+index 4ddc269164f8..fb70cca3bec9 100644
+--- a/net/wireless/util.c
++++ b/net/wireless/util.c
+@@ -1087,7 +1087,6 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
+ 			fallthrough;
+ 		case NL80211_IFTYPE_OCB:
+ 		case NL80211_IFTYPE_P2P_CLIENT:
+-		case NL80211_IFTYPE_ADHOC:
+ 			dev->priv_flags |= IFF_DONT_BRIDGE;
+ 			break;
+ 		case NL80211_IFTYPE_P2P_GO:
+-- 
+2.25.1
+
