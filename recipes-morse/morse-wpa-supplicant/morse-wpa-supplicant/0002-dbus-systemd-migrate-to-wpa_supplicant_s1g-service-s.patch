@@ -1,0 +1,179 @@
+From af512ed9fbed5f767132bf31b645ea0164574953 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Tue, 27 May 2025 20:01:41 +1000
+Subject: [PATCH] dbus: systemd: migrate to wpa_supplicant_s1g service scripts
+
+To better enable deployment on dbus controlled systems alongside
+other Morse Micro radios, we direct wpa_supplicant to an alternative
+dbus path. This requires adjustment of dbus and systemd service scripts
+to accomodate the new path
+
+Signed-off-by: Arien Judge <arien.judge@morsemicro.com>
+---
+ wpa_supplicant/Makefile                           | 11 +++++------
+ wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf  | 14 +++++++-------
+ .../dbus/fi.w1.wpa_supplicant1.service.in         |  5 -----
+ .../dbus/fi.w1.wpa_supplicant1_s1g.service.in     |  5 +++++
+ .../systemd/wpa_supplicant-wired.service.arg.in   | 15 ---------------
+ ... => wpa_supplicant_s1g-nl80211.service.arg.in} |  2 +-
+ ...e.arg.in => wpa_supplicant_s1g.service.arg.in} |  2 +-
+ ...t.service.in => wpa_supplicant_s1g.service.in} |  6 +++---
+ 8 files changed, 22 insertions(+), 38 deletions(-)
+ delete mode 100644 wpa_supplicant/dbus/fi.w1.wpa_supplicant1.service.in
+ create mode 100644 wpa_supplicant/dbus/fi.w1.wpa_supplicant1_s1g.service.in
+ delete mode 100644 wpa_supplicant/systemd/wpa_supplicant-wired.service.arg.in
+ rename wpa_supplicant/systemd/{wpa_supplicant-nl80211.service.arg.in => wpa_supplicant_s1g-nl80211.service.arg.in} (75%)
+ rename wpa_supplicant/systemd/{wpa_supplicant.service.arg.in => wpa_supplicant_s1g.service.arg.in} (77%)
+ rename wpa_supplicant/systemd/{wpa_supplicant.service.in => wpa_supplicant_s1g.service.in} (56%)
+
+diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
+index b30a5ca4f..43ebf526a 100644
+--- a/wpa_supplicant/Makefile
++++ b/wpa_supplicant/Makefile
+@@ -13,11 +13,10 @@ BINALL += wpa_passphrase_s1g
+ endif
+ 
+ ALL = $(BINALL)
+-ALL += systemd/wpa_supplicant.service
+-ALL += systemd/wpa_supplicant@.service
+-ALL += systemd/wpa_supplicant-nl80211@.service
+-ALL += systemd/wpa_supplicant-wired@.service
+-ALL += dbus/fi.w1.wpa_supplicant1.service
++ALL += systemd/wpa_supplicant_s1g.service
++ALL += systemd/wpa_supplicant_s1g@.service
++ALL += systemd/wpa_supplicant_s1g-nl80211@.service
++ALL += dbus/fi.w1.wpa_supplicant1_s1g.service
+ 
+ EXTRA_TARGETS=dynamic_eap_methods
+ 
+@@ -95,7 +94,7 @@ $(DESTDIR)$(BINDIR)/%: %
+ install: $(addprefix $(DESTDIR)$(BINDIR)/,$(BINALL))
+ 	$(MAKE) -C ../src install
+ ifndef CONFIG_NO_WPA_PASSPHRASE
+-	install -D wpa_passphrase $(DESTDIR)/$(BINDIR)/wpa_passphrase
++	install -D wpa_passphrase_s1g $(DESTDIR)/$(BINDIR)/wpa_passphrase_s1g
+ endif
+ 
+ ifdef CONFIG_BUILD_PASN_SO
+diff --git a/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf b/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf
+index e81b495f4..fdaef00f7 100644
+--- a/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf
++++ b/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf
+@@ -3,15 +3,15 @@
+  "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+ <busconfig>
+         <policy user="root">
+-                <allow own="fi.w1.wpa_supplicant1"/>
++                <allow own="fi.w1.wpa_supplicant1_s1g"/>
+ 
+-                <allow send_destination="fi.w1.wpa_supplicant1"/>
+-                <allow send_interface="fi.w1.wpa_supplicant1"/>
+-                <allow receive_sender="fi.w1.wpa_supplicant1" receive_type="signal"/>
++                <allow send_destination="fi.w1.wpa_supplicant1_s1g"/>
++                <allow send_interface="fi.w1.wpa_supplicant1_s1g"/>
++                <allow receive_sender="fi.w1.wpa_supplicant1_s1g" receive_type="signal"/>
+         </policy>
+         <policy context="default">
+-                <deny own="fi.w1.wpa_supplicant1"/>
+-                <deny send_destination="fi.w1.wpa_supplicant1"/>
+-                <deny receive_sender="fi.w1.wpa_supplicant1" receive_type="signal"/>
++                <deny own="fi.w1.wpa_supplicant1_s1g"/>
++                <deny send_destination="fi.w1.wpa_supplicant1_s1g"/>
++                <deny receive_sender="fi.w1.wpa_supplicant1_s1g" receive_type="signal"/>
+         </policy>
+ </busconfig>
+diff --git a/wpa_supplicant/dbus/fi.w1.wpa_supplicant1.service.in b/wpa_supplicant/dbus/fi.w1.wpa_supplicant1.service.in
+deleted file mode 100644
+index d97ff3921..000000000
+--- a/wpa_supplicant/dbus/fi.w1.wpa_supplicant1.service.in
++++ /dev/null
+@@ -1,5 +0,0 @@
+-[D-BUS Service]
+-Name=fi.w1.wpa_supplicant1
+-Exec=@BINDIR@/wpa_supplicant -u
+-User=root
+-SystemdService=wpa_supplicant.service
+diff --git a/wpa_supplicant/dbus/fi.w1.wpa_supplicant1_s1g.service.in b/wpa_supplicant/dbus/fi.w1.wpa_supplicant1_s1g.service.in
+new file mode 100644
+index 000000000..3ff750038
+--- /dev/null
++++ b/wpa_supplicant/dbus/fi.w1.wpa_supplicant1_s1g.service.in
+@@ -0,0 +1,5 @@
++[D-BUS Service]
++Name=fi.w1.wpa_supplicant1_s1g
++Exec=@BINDIR@/wpa_supplicant_s1g -u
++User=root
++SystemdService=wpa_supplicant_s1g.service
+diff --git a/wpa_supplicant/systemd/wpa_supplicant-wired.service.arg.in b/wpa_supplicant/systemd/wpa_supplicant-wired.service.arg.in
+deleted file mode 100644
+index ca3054bc6..000000000
+--- a/wpa_supplicant/systemd/wpa_supplicant-wired.service.arg.in
++++ /dev/null
+@@ -1,15 +0,0 @@
+-[Unit]
+-Description=WPA supplicant daemon (interface- and wired driver-specific version)
+-Requires=sys-subsystem-net-devices-%i.device
+-After=sys-subsystem-net-devices-%i.device
+-Before=network.target
+-Wants=network.target
+-
+-# NetworkManager users will probably want the dbus version instead.
+-
+-[Service]
+-Type=simple
+-ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-wired-%I.conf -Dwired -i%I
+-
+-[Install]
+-WantedBy=multi-user.target
+diff --git a/wpa_supplicant/systemd/wpa_supplicant-nl80211.service.arg.in b/wpa_supplicant/systemd/wpa_supplicant_s1g-nl80211.service.arg.in
+similarity index 75%
+rename from wpa_supplicant/systemd/wpa_supplicant-nl80211.service.arg.in
+rename to wpa_supplicant/systemd/wpa_supplicant_s1g-nl80211.service.arg.in
+index 4eab33526..327075f4a 100644
+--- a/wpa_supplicant/systemd/wpa_supplicant-nl80211.service.arg.in
++++ b/wpa_supplicant/systemd/wpa_supplicant_s1g-nl80211.service.arg.in
+@@ -9,7 +9,7 @@ Wants=network.target
+ 
+ [Service]
+ Type=simple
+-ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-nl80211-%I.conf -Dnl80211 -i%I
++ExecStart=@BINDIR@/wpa_supplicant_s1g -c/etc/wpa_supplicant/wpa_supplicant_s1g-nl80211-%I.conf -Dnl80211 -i%I
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/wpa_supplicant/systemd/wpa_supplicant.service.arg.in b/wpa_supplicant/systemd/wpa_supplicant_s1g.service.arg.in
+similarity index 77%
+rename from wpa_supplicant/systemd/wpa_supplicant.service.arg.in
+rename to wpa_supplicant/systemd/wpa_supplicant_s1g.service.arg.in
+index b0d610fa8..c8deb7e74 100644
+--- a/wpa_supplicant/systemd/wpa_supplicant.service.arg.in
++++ b/wpa_supplicant/systemd/wpa_supplicant_s1g.service.arg.in
+@@ -9,7 +9,7 @@ Wants=network.target
+ 
+ [Service]
+ Type=simple
+-ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-%I.conf -i%I
++ExecStart=@BINDIR@/wpa_supplicant_s1g -c/etc/wpa_supplicant/wpa_supplicant_s1g-%I.conf -i%I
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/wpa_supplicant/systemd/wpa_supplicant.service.in b/wpa_supplicant/systemd/wpa_supplicant_s1g.service.in
+similarity index 56%
+rename from wpa_supplicant/systemd/wpa_supplicant.service.in
+rename to wpa_supplicant/systemd/wpa_supplicant_s1g.service.in
+index 58a622887..8e18324ce 100644
+--- a/wpa_supplicant/systemd/wpa_supplicant.service.in
++++ b/wpa_supplicant/systemd/wpa_supplicant_s1g.service.in
+@@ -6,9 +6,9 @@ Wants=network.target
+ 
+ [Service]
+ Type=dbus
+-BusName=fi.w1.wpa_supplicant1
+-ExecStart=@BINDIR@/wpa_supplicant -u
++BusName=fi.w1.wpa_supplicant1_s1g
++ExecStart=@BINDIR@/wpa_supplicant_s1g -u
+ 
+ [Install]
+ WantedBy=multi-user.target
+-Alias=dbus-fi.w1.wpa_supplicant1.service
++Alias=dbus-fi.w1.wpa_supplicant1_s1g.service

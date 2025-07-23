@@ -1,0 +1,27 @@
+From 903fd733166429550da5895b62d0bc66345ea70f Mon Sep 17 00:00:00 2001
+From: Chetan Mistry <chetan.mistry@morsemicro.com>
+Date: Tue, 20 May 2025 17:39:32 +1000
+Subject: [PATCH] OSP-85 Register wpa_supplicant_s1g on unique DBus path
+
+Signed-off-by: Chetan Mistry <chetan.mistry@morsemicro.com>
+---
+ wpa_supplicant/dbus/dbus_new.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/wpa_supplicant/dbus/dbus_new.h b/wpa_supplicant/dbus/dbus_new.h
+index 5c5d85506..c6edf0e24 100644
+--- a/wpa_supplicant/dbus/dbus_new.h
++++ b/wpa_supplicant/dbus/dbus_new.h
+@@ -61,9 +61,9 @@ enum wpas_dbus_sta_prop {
+ 
+ #define WPAS_DBUS_OBJECT_PATH_MAX 150
+ 
+-#define WPAS_DBUS_NEW_SERVICE		"fi.w1.wpa_supplicant1"
+-#define WPAS_DBUS_NEW_PATH		"/fi/w1/wpa_supplicant1"
+-#define WPAS_DBUS_NEW_INTERFACE		"fi.w1.wpa_supplicant1"
++#define WPAS_DBUS_NEW_SERVICE		"fi.w1.wpa_supplicant1_s1g"
++#define WPAS_DBUS_NEW_PATH		"/fi/w1/wpa_supplicant1_s1g"
++#define WPAS_DBUS_NEW_INTERFACE		"fi.w1.wpa_supplicant1_s1g"
+ 
+ #define WPAS_DBUS_NEW_PATH_INTERFACES	WPAS_DBUS_NEW_PATH "/Interfaces"
+ #define WPAS_DBUS_NEW_IFACE_INTERFACE	WPAS_DBUS_NEW_INTERFACE ".Interface"
