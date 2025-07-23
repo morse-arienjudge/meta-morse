@@ -1,0 +1,25 @@
+From a6c9f6595b88ef4ddf074cc914d60892c569bb34 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Thu, 26 Jun 2025 13:10:23 +1000
+Subject: [PATCH 15/15] spi: imx: force use_dynamic_burst true
+
+---
+ drivers/spi/spi-imx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
+index e5dc2cecef90..5103fa34a93e 100644
+--- a/drivers/spi/spi-imx.c
++++ b/drivers/spi/spi-imx.c
+@@ -36,7 +36,7 @@ module_param(polling_limit_us, uint, 0664);
+ MODULE_PARM_DESC(polling_limit_us,
+ 		 "time in us to run a transfer in polling mode\n");
+ 
+-static bool use_dma_dynamic_burst;
++static bool use_dma_dynamic_burst = true;
+ module_param(use_dma_dynamic_burst, bool, 0644);
+ MODULE_PARM_DESC(use_dma_dynamic_burst, "Enable usage of DMA dynamic_burst when available (default not available)");
+ 
+-- 
+2.25.1
+

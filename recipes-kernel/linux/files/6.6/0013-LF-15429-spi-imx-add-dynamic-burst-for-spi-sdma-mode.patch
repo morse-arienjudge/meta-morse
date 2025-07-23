@@ -1,0 +1,389 @@
+From c8698448b4d853ae148beabe26d23ba2f577d763 Mon Sep 17 00:00:00 2001
+From: Carlos Song <carlos.song@nxp.com>
+Date: Wed, 11 Jun 2025 16:29:53 +0800
+Subject: [PATCH 13/15] LF-15429: spi: imx: add dynamic burst for spi sdma mode
+
+In sdma mode, ecspi transfer one word in one frame, so clk delay will be
+found between every word. A performance improvement is needed.
+
+ECSPI support 512 bytes burst length in one frame, it means ecspi can only
+need to update 1 time when burst length < 512 bytes not need in every word.
+So this improvement work is done based on this.
+
+ECSPI will burst n bits in first word and 32 bis second words. Real data
+maybe not a 4 bytes alaigned, so we create tx and rx buffer and alloc
+memory for them to send and get 4 bytes aligned data to/from sdma. For TX,
+sdma will push 4 bytes data to TXFIFO and cspi can use burst length to
+keep real bits transfer. For RX, sdma will receive every 32 bits word from
+RXFIFO, when transfer finished, we cut sdma buffer data and give the real
+data to transfer rx_buf.
+
+After apply this patch, using 10M clk frequency, transfer 4K bytes,
+performance can improve ~50%. transfer 512 bytes, performance can improve
+~200%. Now we can support native cs pin when transfer bytes < 512 bytes,
+if use native cs pin instread of cs gpio, the performance can improve
+~280%.
+
+In fact, not every spi device expect this high performance, high IO rate
+may cause them FIFO overrun or underrun, so this feature is not enabled
+in default, when this feature is needed, it is easy, just need to change
+use_dma_dynamic_burst from false to true.
+
+Signed-off-by: Carlos Song <carlos.song@nxp.com>
+---
+ drivers/spi/spi-imx.c | 304 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 300 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
+index 9b1fe2a7d63c..6c59dee0b18b 100644
+--- a/drivers/spi/spi-imx.c
++++ b/drivers/spi/spi-imx.c
+@@ -36,6 +36,10 @@ module_param(polling_limit_us, uint, 0664);
+ MODULE_PARM_DESC(polling_limit_us,
+ 		 "time in us to run a transfer in polling mode\n");
+ 
++static bool use_dma_dynamic_burst;
++module_param(use_dma_dynamic_burst, bool, 0644);
++MODULE_PARM_DESC(use_dma_dynamic_burst, "Enable usage of DMA dynamic_burst when available (default not available)");
++
+ #define MXC_RPM_TIMEOUT		2000 /* 2000ms */
+ #define MXC_SPI_DEFAULT_SPEED	500000 /* 500KHz */
+ 
+@@ -122,6 +126,11 @@ struct spi_imx_data {
+ 	/* DMA */
+ 	bool usedma;
+ 	u32 wml;
++	u32 *dma_rx_buf;
++	u32 *dma_tx_buf;
++	dma_addr_t	dma_tx_addr;
++	dma_addr_t	dma_rx_addr;
++	int dma_len;
+ 	struct completion dma_rx_completion;
+ 	struct completion dma_tx_completion;
+ 
+@@ -550,6 +559,14 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
+ 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
+ 	u32 current_cfg = cfg;
+ 	int channel = mx51_ecspi_channel(spi);
++	int ret;
++
++	if (use_dma_dynamic_burst) {
++		ret = spi_split_transfers_maxsize(spi_imx->controller, msg,
++						  MX51_ECSPI_CTRL_MAX_BURST);
++		if (ret)
++			return ret;
++	}
+ 
+ 	/* set Host or Target mode */
+ 	if (spi_imx->target_mode)
+@@ -1378,8 +1395,10 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
+ 
+ 	init_completion(&spi_imx->dma_rx_completion);
+ 	init_completion(&spi_imx->dma_tx_completion);
+-	controller->can_dma = spi_imx_can_dma;
+-	controller->max_dma_len = MAX_SDMA_BD_BYTES;
++	if (use_dma && !use_dma_dynamic_burst) {
++		controller->can_dma = spi_imx_can_dma;
++		controller->max_dma_len = MAX_SDMA_BD_BYTES;
++	}
+ 	spi_imx->controller->flags = SPI_CONTROLLER_MUST_RX |
+ 					 SPI_CONTROLLER_MUST_TX;
+ 
+@@ -1417,6 +1436,279 @@ static int spi_imx_calculate_timeout(struct spi_imx_data *spi_imx, int size)
+ 	return msecs_to_jiffies(2 * timeout * MSEC_PER_SEC);
+ }
+ 
++static int spi_imx_dma_dynamic_burst_start(struct spi_controller *controller)
++{
++	struct spi_imx_data *spi_imx = spi_controller_get_devdata(controller);
++	struct dma_async_tx_descriptor *desc_tx, *desc_rx;
++
++	desc_rx = dmaengine_prep_slave_single(controller->dma_rx, spi_imx->dma_rx_addr,
++					   spi_imx->dma_len, DMA_DEV_TO_MEM,
++					   DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
++	if (!desc_rx) {
++		dev_err(spi_imx->dev, "Prepare desc_rx fail\n");
++		return -EINVAL;
++	}
++
++	desc_rx->callback = spi_imx_dma_rx_callback;
++	desc_rx->callback_param = (void *)spi_imx;
++	dmaengine_submit(desc_rx);
++	reinit_completion(&spi_imx->dma_rx_completion);
++	dma_async_issue_pending(controller->dma_rx);
++
++	desc_tx = dmaengine_prep_slave_single(controller->dma_tx, spi_imx->dma_tx_addr,
++					    spi_imx->dma_len, DMA_MEM_TO_DEV,
++					    DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
++	if (!desc_tx) {
++		dev_err(spi_imx->dev, "Prepare desc_tx fail\n");
++		dmaengine_terminate_all(controller->dma_tx);
++		dmaengine_terminate_all(controller->dma_rx);
++		return -EINVAL;
++	}
++
++	desc_tx->callback = spi_imx_dma_tx_callback;
++	desc_tx->callback_param = (void *)spi_imx;
++	dmaengine_submit(desc_tx);
++	reinit_completion(&spi_imx->dma_tx_completion);
++	dma_async_issue_pending(controller->dma_tx);
++
++	return 0;
++}
++
++static int spi_imx_dma_dynamic_burst_configure(struct spi_controller *controller)
++{
++	struct spi_imx_data *spi_imx = spi_controller_get_devdata(controller);
++	struct dma_slave_config rx = {}, tx = {};
++	unsigned int i;
++	int ret;
++
++	for (i = spi_imx->devtype_data->fifo_size / 2; i > 0; i--) {
++		if (!spi_imx->dma_len % (i * 4))
++			break;
++	}
++	/* Use 1 as wml in case no available burst length got */
++	if (i == 0)
++		i = 1;
++
++	spi_imx->wml = i;
++
++	tx.direction = DMA_MEM_TO_DEV;
++	tx.dst_addr = spi_imx->base_phys + MXC_CSPITXDATA;
++	tx.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
++	tx.dst_maxburst = spi_imx->wml;
++	tx.peripheral_config = NULL;
++	tx.peripheral_size = 0;
++	ret = dmaengine_slave_config(controller->dma_tx, &tx);
++	if (ret) {
++		dev_err(spi_imx->dev, "TX dma configuration failed with %d\n", ret);
++		return ret;
++	}
++
++	rx.direction = DMA_DEV_TO_MEM;
++	rx.src_addr = spi_imx->base_phys + MXC_CSPIRXDATA;
++	rx.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
++	rx.src_maxburst = spi_imx->wml;
++	rx.peripheral_config = NULL;
++	rx.peripheral_size = 0;
++	ret = dmaengine_slave_config(controller->dma_rx, &rx);
++	if (ret) {
++		dev_err(spi_imx->dev, "RX dma configuration failed with %d\n", ret);
++		return ret;
++	}
++
++	if (!spi_imx->devtype_data->setup_wml) {
++		dev_err(spi_imx->dev, "No setup_wml()?\n");
++		return -EINVAL;
++	}
++
++	spi_imx->devtype_data->setup_wml(spi_imx);
++
++	return 0;
++}
++
++static int spi_imx_dma_dynamic_burst_data_handle(struct spi_imx_data *spi_imx,
++						 struct spi_transfer *transfer)
++{
++	int dma_words_num, unaligned;
++#ifdef __LITTLE_ENDIAN
++	unsigned int bytes_per_word;
++#endif
++	void *copy_ptr;
++	void *temp;
++
++	dma_words_num =  DIV_ROUND_UP(transfer->len, 4);
++
++	if (spi_imx->bits_per_word != 8 && spi_imx->bits_per_word != 16 &&
++	    spi_imx->bits_per_word != 32) {
++		return -EINVAL;
++	}
++
++#ifdef __LITTLE_ENDIAN
++	bytes_per_word = spi_imx_bytes_per_word(spi_imx->bits_per_word);
++	temp = spi_imx->dma_rx_buf;
++	for (int i = 0; i <= dma_words_num - 1; i++) {
++		if (bytes_per_word == 1)
++			swab32s((u32 *)temp + i);
++		else if (bytes_per_word == 2)
++			swahw32s((u32 *)temp + i);
++	}
++#endif
++
++	if (transfer->len % 4) {
++		unaligned = transfer->len % 4;
++		copy_ptr = (u8 *)spi_imx->dma_rx_buf + 4 - unaligned;
++	} else
++		copy_ptr = (u8 *)spi_imx->dma_rx_buf;
++
++	memcpy(transfer->rx_buf, copy_ptr, transfer->len);
++	return 0;
++}
++
++static int spi_imx_dma_dynamic_burst_data_prepare(struct spi_imx_data *spi_imx,
++						  struct spi_transfer *transfer)
++{
++	int dma_words_num, unaligned;
++#ifdef __LITTLE_ENDIAN
++	unsigned int bytes_per_word;
++#endif
++	void *copy_ptr;
++	void *temp;
++
++	if (spi_imx->bits_per_word != 8 && spi_imx->bits_per_word != 16 &&
++	    spi_imx->bits_per_word != 32) {
++		return -EINVAL;
++	}
++
++	/*
++	 * ECSPI will burst n bits in first word and 32 bis second words.
++	 * Real data may be not a 4 bytes alaigned, so we create tx and rx buffer
++	 * and alloc memory for them to send and get 4 bytes aligned data to/from
++	 * sdma. For TX, sdma will push 4 bytes data to TXFIFO and cspi can use
++	 * burst length to keep real bits transfer. For RX, sdma will receive every
++	 * 32 bits word from RXFIFO, when transfer finished, we cut sdma buffer data
++	 * and give the real data to transfer rx_buf.
++	 */
++	dma_words_num =  DIV_ROUND_UP(transfer->len, 4);
++	spi_imx->dma_len = dma_words_num * 4;
++	spi_imx->dma_tx_buf = kcalloc(dma_words_num, sizeof(u32), GFP_KERNEL);
++	if (!spi_imx->dma_tx_buf)
++		return -ENOMEM;
++
++	spi_imx->dma_rx_buf = kcalloc(dma_words_num, sizeof(u32), GFP_KERNEL);
++	if (!spi_imx->dma_rx_buf) {
++		kfree(spi_imx->dma_tx_buf);
++		return -ENOMEM;
++	}
++
++	if (transfer->len % 4) {
++		unaligned = transfer->len % 4;
++		copy_ptr = (u8 *)spi_imx->dma_tx_buf + 4 - unaligned;
++	} else
++		copy_ptr = (u8 *)spi_imx->dma_tx_buf;
++
++	memcpy(copy_ptr, transfer->tx_buf, transfer->len);
++
++#ifdef __LITTLE_ENDIAN
++	bytes_per_word = spi_imx_bytes_per_word(spi_imx->bits_per_word);
++	temp = spi_imx->dma_tx_buf;
++	for (int i = 0; i <= dma_words_num - 1; i++) {
++		if (bytes_per_word == 1)
++			swab32s((u32 *)temp + i);
++		else if (bytes_per_word == 2)
++			swahw32s((u32 *)temp + i);
++	}
++#endif
++
++	return 0;
++}
++
++static int spi_imx_dma_dynamic_burst_transfer(struct spi_imx_data *spi_imx,
++				struct spi_transfer *transfer)
++{
++	struct spi_controller *controller = spi_imx->controller;
++	struct device *tx_dev = controller->dma_tx->device->dev;
++	struct device *rx_dev = controller->dma_rx->device->dev;
++	unsigned long transfer_timeout;
++	unsigned long time_left;
++	int ret;
++
++	ret = spi_imx_dma_dynamic_burst_data_prepare(spi_imx, transfer);
++	if (ret < 0) {
++		transfer->error |= SPI_TRANS_FAIL_NO_START;
++		goto free_buf;
++	}
++
++	spi_imx->dma_tx_addr = dma_map_single(tx_dev, spi_imx->dma_tx_buf,
++					      spi_imx->dma_len, DMA_TO_DEVICE);
++	if (dma_mapping_error(tx_dev, spi_imx->dma_tx_addr)) {
++		dev_err(spi_imx->dev, "DMA TX map failed, use pio\n");
++		transfer->error |= SPI_TRANS_FAIL_NO_START;
++		ret = -EINVAL;
++		goto free_buf;
++	}
++
++	spi_imx->dma_rx_addr = dma_map_single(rx_dev, spi_imx->dma_rx_buf,
++					      spi_imx->dma_len, DMA_FROM_DEVICE);
++	if (dma_mapping_error(rx_dev, spi_imx->dma_rx_addr)) {
++		dev_err(spi_imx->dev, "DMA RX map failed, use pio\n");
++		transfer->error |= SPI_TRANS_FAIL_NO_START;
++		ret = -EINVAL;
++		goto dma_unmap_tx;
++	}
++
++
++	/* Update burst length to keep real bits shift number */
++	spi_imx_set_burst_len(spi_imx, transfer->len * 8);
++
++	ret = spi_imx_dma_dynamic_burst_configure(controller);
++	if (ret) {
++		dev_err(spi_imx->dev, "DMA configure fail\n");
++		transfer->error |= SPI_TRANS_FAIL_NO_START;
++		goto dma_unmap_rx;
++	}
++
++	ret = spi_imx_dma_dynamic_burst_start(controller);
++	if (ret)
++		goto dma_unmap_rx;
++
++	spi_imx->devtype_data->trigger(spi_imx);
++
++	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
++
++	/* Wait SDMA to finish the data transfer.*/
++	time_left = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
++						transfer_timeout);
++	if (!time_left) {
++		dev_err(spi_imx->dev, "I/O Error in DMA TX\n");
++		dmaengine_terminate_all(controller->dma_tx);
++		dmaengine_terminate_all(controller->dma_rx);
++		ret = -ETIMEDOUT;
++		goto dma_unmap_rx;
++	}
++
++	time_left = wait_for_completion_timeout(&spi_imx->dma_rx_completion,
++						transfer_timeout);
++	if (!time_left) {
++		dev_err(&controller->dev, "I/O Error in DMA RX\n");
++		spi_imx->devtype_data->reset(spi_imx);
++		dmaengine_terminate_all(controller->dma_rx);
++		ret = -ETIMEDOUT;
++		goto dma_unmap_rx;
++	}
++
++	/* Sync data for CPU to handle RX DMA data*/
++	dma_sync_single_for_cpu(rx_dev, spi_imx->dma_rx_addr, spi_imx->dma_len, DMA_FROM_DEVICE);
++	ret = spi_imx_dma_dynamic_burst_data_handle(spi_imx, transfer);
++
++dma_unmap_rx:
++	dma_unmap_single(rx_dev, spi_imx->dma_rx_addr, spi_imx->dma_len, DMA_FROM_DEVICE);
++dma_unmap_tx:
++	dma_unmap_single(tx_dev, spi_imx->dma_tx_addr, spi_imx->dma_len, DMA_TO_DEVICE);
++free_buf:
++	kfree(spi_imx->dma_rx_buf);
++	kfree(spi_imx->dma_tx_buf);
++	return ret;
++}
++
+ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
+ 				struct spi_transfer *transfer)
+ {
+@@ -1662,8 +1954,12 @@ static int spi_imx_transfer_one(struct spi_controller *controller,
+ 	 * transfer, the SPI transfer has already been mapped, so we
+ 	 * have to do the DMA transfer here.
+ 	 */
+-	if (spi_imx->usedma)
+-		return spi_imx_dma_transfer(spi_imx, transfer);
++	if (spi_imx->usedma) {
++		if (!use_dma_dynamic_burst)
++			return spi_imx_dma_transfer(spi_imx, transfer);
++		else
++			return spi_imx_dma_dynamic_burst_transfer(spi_imx, transfer);
++	}
+ 	/*
+ 	 * Calculate the estimated time in us the transfer runs. Find
+ 	 * the number of Hz per byte per polling limit.
+-- 
+2.25.1
+

@@ -1,0 +1,25 @@
+From a650fa48bec0d58068bce7fe5e1cb7998c0236c4 Mon Sep 17 00:00:00 2001
+From: Arien Judge <arien.judge@morsemicro.com>
+Date: Thu, 26 Jun 2025 13:09:42 +1000
+Subject: [PATCH 14/15] spi: imx: restore gfp parameter following NXP changes
+
+---
+ drivers/spi/spi-imx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
+index 6c59dee0b18b..e5dc2cecef90 100644
+--- a/drivers/spi/spi-imx.c
++++ b/drivers/spi/spi-imx.c
+@@ -563,7 +563,7 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
+ 
+ 	if (use_dma_dynamic_burst) {
+ 		ret = spi_split_transfers_maxsize(spi_imx->controller, msg,
+-						  MX51_ECSPI_CTRL_MAX_BURST);
++						  MX51_ECSPI_CTRL_MAX_BURST, GFP_KERNEL | GFP_DMA);
+ 		if (ret)
+ 			return ret;
+ 	}
+-- 
+2.25.1
+
