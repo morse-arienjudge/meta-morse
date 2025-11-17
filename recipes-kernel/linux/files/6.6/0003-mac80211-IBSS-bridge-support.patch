@@ -1,7 +1,7 @@
 From 3804ca8ec2675fbfe96c6f7fded7f91918d8887c Mon Sep 17 00:00:00 2001
 From: Ria Thomas <ria.thomas@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:07 +1100
-Subject: [PATCH 03/10] mac80211: IBSS bridge support
+Subject: [PATCH 03/14] mac80211: IBSS bridge support
 
 With the addition of BATMAN routing protocol, an IBSS (ad hoc) interface
 can be bridged with Ethernet intefaces. Add bridge mode support for IBSS

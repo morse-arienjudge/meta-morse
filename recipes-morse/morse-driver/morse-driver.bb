@@ -1,8 +1,8 @@
 DESCRIPTION = "Build and install the morse driver"
 
-TAG_NAME = "1.12.4"
+TAG_NAME = "1.15.3"
 PV = "${TAG_NAME}+git${SRCPV}"
-SRC_URI = "git://github.com/MorseMicro/morse_driver.git;protocol=https;branch=main;tag=${TAG_NAME}"
+SRC_URI = "git://github.com/MorseMicro/morse_driver.git;protocol=https;branch=main;tag=${TAG_NAME};submodules=1"
 
 LICENSE = "GPL-2.0"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=b234ee4d69f5fce4486a80fdaf4a4263"
@@ -20,7 +20,7 @@ do_configure() {
 
 do_compile() {
 	bbnote $(pwd)
-	oe_runmake CONFIG_WLAN_VENDOR_MORSE=m CONFIG_MORSE_SDIO_ALIGNMENT=4 CONFIG_MORSE_SDIO=y CONFIG_MORSE_SPI=y CONFIG_MORSE_USER_ACCESS=y CONFIG_MORSE_VENDOR_COMMAND=y CONFIG_MORSE_ENABLE_TEST_MODES=y
+	oe_runmake CONFIG_WLAN_VENDOR_MORSE=m CONFIG_MORSE_SDIO_ALIGNMENT=4 CONFIG_MORSE_SDIO=y CONFIG_MORSE_SPI=y CONFIG_MORSE_USB=y CONFIG_MORSE_USER_ACCESS=y CONFIG_MORSE_VENDOR_COMMAND=y CONFIG_MORSE_ENABLE_TEST_MODES=y
 }
 
 do_install() {

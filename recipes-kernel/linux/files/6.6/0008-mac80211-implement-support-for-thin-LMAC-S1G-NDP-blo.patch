@@ -1,7 +1,7 @@
 From 69283c181040406bd9d594e47e38542343983f84 Mon Sep 17 00:00:00 2001
 From: Liam Kearney <liam.kearney@morsemicro.com>
 Date: Thu, 13 Mar 2025 01:36:11 +1100
-Subject: [PATCH 08/10] mac80211: implement support for thin LMAC S1G NDP block
+Subject: [PATCH 08/14] mac80211: implement support for thin LMAC S1G NDP block
  acknowledgements
 
 This is an optional patch and is only required for Morse Micro's "Thin LMAC

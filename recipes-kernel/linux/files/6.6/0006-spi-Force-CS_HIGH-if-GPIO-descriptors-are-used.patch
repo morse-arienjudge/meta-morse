@@ -1,7 +1,7 @@
 From 6662697e7284dac77cfcf6c88e25cb2da78ae75d Mon Sep 17 00:00:00 2001
 From: Phil Elwell <phil@raspberrypi.com>
 Date: Fri, 17 Apr 2020 10:46:19 +0100
-Subject: [PATCH 06/10] spi: Force CS_HIGH if GPIO descriptors are used
+Subject: [PATCH 06/14] spi: Force CS_HIGH if GPIO descriptors are used
 
 Commit f3186dd87669 ("spi: Optionally use GPIO descriptors for CS GPIOs")
 amended of_spi_parse_dt() to always set SPI_CS_HIGH for SPI slaves whose

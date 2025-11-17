@@ -1,7 +1,7 @@
 From 1f291884a5a8adf6d70ab9a85154efa79968482e Mon Sep 17 00:00:00 2001
 From: Nev Young <neville.young@morsemicro.com>
 Date: Mon, 10 Mar 2025 19:29:11 +1100
-Subject: [PATCH 05/10] mmc: sdio 1.8v support quirk
+Subject: [PATCH 05/14] mmc: sdio 1.8v support quirk
 
 MM610x chips do not support the 1.8V bus switch despite advertising
 support when queried by SDIO 3.0 host devices. Introduce a quirk for

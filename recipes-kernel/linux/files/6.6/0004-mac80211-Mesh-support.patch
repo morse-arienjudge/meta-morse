@@ -1,7 +1,7 @@
 From f948c7ac54c73e605791f576067cb11ce229e080 Mon Sep 17 00:00:00 2001
 From: Pradeep Reddy <pradeep.reddy@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:07 +1100
-Subject: [PATCH 04/10] mac80211: Mesh support
+Subject: [PATCH 04/14] mac80211: Mesh support
 
 * Add support for the WPA supplicant 'ieee80211w' parameter for Mesh
 interfaces to the cfg80211 module.

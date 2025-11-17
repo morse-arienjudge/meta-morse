@@ -1,7 +1,7 @@
 From 77cd2d08f1cec39e3c8b2fea734772a73ac89ca9 Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Thu, 27 Apr 2017 12:45:38 +0530
-Subject: [PATCH 01/10] mac80211: mlme s1g ecsa support
+Subject: [PATCH 01/14] mac80211: mlme s1g ecsa support
 
 Update the STA-side MLME to consider short beacons in channel switch
 time calculations, which effectively considers the time based on DTIM

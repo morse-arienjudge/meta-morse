@@ -1,8 +1,8 @@
 DESCRIPTION = "Build and install Sub-One GHz Hostapd"
 
-TAG_NAME = "1.12.4"
+TAG_NAME = "1.15.3"
 PV = "${TAG_NAME}+git${SRCPV}"
-SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=v1.12;tag=${TAG_NAME}"
+SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=v1.15;tag=${TAG_NAME}"
 
 
 LICENSE = "GPL-2.0"
@@ -25,7 +25,7 @@ do_configure() {
 }
 
 do_compile() {
-    oe_runmake MORSE_VERSION=rel_1_12_4_2024_Jun_11 -C .
+    oe_runmake MORSE_VERSION=rel_1_15_3_2025_Apr_16 -C .
 }
 
 do_install() {  
@@ -33,4 +33,3 @@ do_install() {
     export DESTDIR="${D}"
     oe_runmake install
 }
-

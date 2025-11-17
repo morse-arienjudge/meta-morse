@@ -1,7 +1,7 @@
 From 6acba4abcbd05025eef9295656ed16c8c025ad22 Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Mon, 10 Mar 2025 19:50:55 +1100
-Subject: [PATCH 09/10] kernel: enable dev coredump by default
+Subject: [PATCH 09/14] kernel: enable dev coredump by default
 
 A Morse Micro driver compiled out of tree has no way to signal to the
 kernel config to enable WANT_DEV_COREDUMP. Enable it by default.

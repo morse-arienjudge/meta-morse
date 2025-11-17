@@ -1,8 +1,8 @@
 DESCRIPTION = "Build and install Sub-One GHz Hostapd"
 
-TAG_NAME = "1.12.4"
+TAG_NAME = "1.15.3"
 PV = "${TAG_NAME}+git${SRCPV}"
-SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=v1.12;tag=${TAG_NAME} \
+SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=v1.15;tag=${TAG_NAME} \
            file://wpa-supplicant_s1g.sh \
            file://wpa_supplicant.conf \
            file://wpa_supplicant_s1g.conf-sane \
@@ -20,7 +20,7 @@ inherit autotools
 DEPENDS += "dbus libnl openssl"
 RDEPENDS_${PN} += "libnl openssl"
 
-CFLAGS:append = " -I${STAGING_INCDIR}/libnl3/ -I${STAGING_INCDIR}/"
+CFLAGS:append = " -I${STAGING_INCDIR}/libnl3/ -I${STAGING_INCDIR}/ -Wno-error=deprecated-declarations"
 LDFLAGS:append = " -L${STAGING_LIBDIR}/"
 LIBS:append = " -lnl-3 -lm -lpthread -lcrypto -lssl"
 
@@ -38,7 +38,7 @@ do_configure() {
 }
 
 do_compile() {
-    oe_runmake MORSE_VERSION=rel_1_12_4_2024_Jun_11 -C .
+    oe_runmake MORSE_VERSION=rel_1_15_3_2025_Apr_16 -C .
 }
 
 do_install() {

@@ -1,7 +1,7 @@
 From 7fece3fe5aa9b3c3966f332674e57bf034db7317 Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Thu, 13 Mar 2025 20:50:20 +1100
-Subject: [PATCH 07/10] spi: support control of SPI CS pin on initialisation
+Subject: [PATCH 07/14] spi: support control of SPI CS pin on initialisation
 
 The Linux kernel as dropped legacy GPIO support and starting using a
 GPIO descriptor based interface for chip select line handling from

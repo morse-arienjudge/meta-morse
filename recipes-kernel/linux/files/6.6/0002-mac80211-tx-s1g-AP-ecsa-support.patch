@@ -1,7 +1,7 @@
 From 8d5f1b326eb7c6f4812894c2b362abc245dec949 Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:06 +1100
-Subject: [PATCH 02/10] mac80211: tx s1g AP ecsa support
+Subject: [PATCH 02/14] mac80211: tx s1g AP ecsa support
 
 Update the AP-side MLME to consider short beacons in channel switch time
 calculations, which includes an ECSA IE only in DTIM beacons. ECSA countdown
