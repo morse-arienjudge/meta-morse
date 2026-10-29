@@ -10,7 +10,7 @@ to accomodate the new path
 
 Signed-off-by: Arien Judge <arien.judge@morsemicro.com>
 ---
- wpa_supplicant/Makefile                           | 11 +++++------
+ wpa_supplicant/Makefile                           | 10 +++++-----
  wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf  | 14 +++++++-------
  .../dbus/fi.w1.wpa_supplicant1.service.in         |  5 -----
  .../dbus/fi.w1.wpa_supplicant1_s1g.service.in     |  5 +++++
@@ -46,15 +46,6 @@ index b30a5ca4f..43ebf526a 100644
  
  EXTRA_TARGETS=dynamic_eap_methods
  
-@@ -95,7 +94,7 @@ $(DESTDIR)$(BINDIR)/%: %
- install: $(addprefix $(DESTDIR)$(BINDIR)/,$(BINALL))
- 	$(MAKE) -C ../src install
- ifndef CONFIG_NO_WPA_PASSPHRASE
--	install -D wpa_passphrase $(DESTDIR)/$(BINDIR)/wpa_passphrase
-+	install -D wpa_passphrase_s1g $(DESTDIR)/$(BINDIR)/wpa_passphrase_s1g
- endif
- 
- ifdef CONFIG_BUILD_PASN_SO
 diff --git a/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf b/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf
 index e81b495f4..fdaef00f7 100644
 --- a/wpa_supplicant/dbus/dbus-wpa_supplicant_s1g.conf

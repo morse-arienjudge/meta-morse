@@ -1,29 +1,19 @@
 DESCRIPTION = "Deploy the firmware and Board Configuration File binaries"
 LICENSE="CLOSED"
-
 BCF_FILENAME = "bcf_mf15457.bin"
 COUNTRY = "AU"
+TAG_NAME = "mm8108-2.1.0"
+SRC_URI = "git://github.com/MorseMicro/morse-firmware.git;protocol=https;branch=2.1;tag=${TAG_NAME}"
 
-SRC_URI = "https://github.com/MorseMicro/firmware_binaries/releases/download/v1.15.3/morsemicro-fw-rel_1_15_3_2025_Apr_16.tar;protocol=https;name=fw \
-		https://github.com/MorseMicro/bcf_binaries/releases/download/v1.15.3/morsemicro-bcf-rel_1_15_3_2025_Apr_16.tar;protocol=https;name=bcf \
-		file://bcf_mf15457.bin \
-		file://mm8108b2-rl.bin"
+S = "${WORKDIR}/git"
 
-SRC_URI[fw.md5sum] = "e73cbb4d8f754c358844a6b2a2ed4988"
-SRC_URI[fw.sha256sum] = "de7e3e9f1b7b97aff9d63687c4d3e99fe2544fcfc7e5567df1ab0da194656469"
+do_compile[noexec] = "1"
 
-SRC_URI[bcf.md5sum] = "32880a70de6f68469bbba384d433f045"
-SRC_URI[bcf.sha256sum] = "bd794c829b57a9049b67bdc9ec9015c5f51ebf7716836e6a37a7962fb5121ef3"
-
-S = "${WORKDIR}"
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+INHIBIT_PACKAGE_STRIP = "1"
 
 do_install() {
-	install -d ${D}${nonarch_base_libdir}/firmware/morse
-	install -m 0644 ${S}/lib/firmware/morse/mm6108.bin ${D}${nonarch_base_libdir}/firmware/morse/mm6108.bin
-	install -m 0644 ${S}/lib/firmware/morse/bcf_mf08651_us.bin ${D}${nonarch_base_libdir}/firmware/morse/bcf_mf08651_us.bin
-
-	install -m 0644 ${S}/mm8108b2-rl.bin ${D}${nonarch_base_libdir}/firmware/morse/mm8108b2-rl.bin
-	install -m 0644 ${S}/bcf_mf15457.bin ${D}${nonarch_base_libdir}/firmware/morse/bcf_mf15457.bin
+	oe_runmake -C ${S} install TARGET_DIR=${D}${nonarch_base_libdir}/firmware/morse
 
 	install -d ${D}${sysconfdir}/modprobe.d
 	echo "# Auto-generated configuration" > ${D}${sysconfdir}/modprobe.d/morse.conf
@@ -32,6 +22,8 @@ do_install() {
 }
 
 # Ignore warning about firmware not being ARM
-INSANE_SKIP:${PN} = "arch"
-FILES:${PN} += "${nonarch_base_libdir}/firmware/morse/bcf_mf08651_us.bin ${nonarch_base_libdir}/firmware/morse/mm6108.bin"
-FILES:${PN} += "${nonarch_base_libdir}/firmware/morse/bcf_mf15457.bin ${nonarch_base_libdir}/firmware/morse/mm8108b2-rl.bin"
+INSANE_SKIP:${PN} += " arch already-stripped"
+FILES:${PN} += "${nonarch_base_libdir}/firmware/morse/*"
+SYSROOT_DIRS_IGNORE += "${nonarch_base_libdir}/firmware/morse"
+#FILES:${PN} += "${nonarch_base_libdir}/firmware/morse/bcf_mf08651_us.bin ${nonarch_base_libdir}/firmware/morse/mm6108.bin"
+#FILES:${PN} += "${nonarch_base_libdir}/firmware/morse/bcf_mf15457.bin ${nonarch_base_libdir}/firmware/morse/mm8108b2-rl.bin"

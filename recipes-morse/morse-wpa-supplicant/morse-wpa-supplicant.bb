@@ -1,8 +1,8 @@
 DESCRIPTION = "Build and install Sub-One GHz Hostapd"
 
-TAG_NAME = "1.15.3"
+TAG_NAME = "mm8108-2.1.0"
 PV = "${TAG_NAME}+git${SRCPV}"
-SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=v1.15;tag=${TAG_NAME} \
+SRC_URI = "git://github.com/MorseMicro/hostap.git;protocol=https;branch=mm8108-2.1;tag=${TAG_NAME} \
            file://wpa-supplicant_s1g.sh \
            file://wpa_supplicant.conf \
            file://wpa_supplicant_s1g.conf-sane \
@@ -18,7 +18,7 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=5ebcb90236d1ad640558c3d3cd3035df"
 
 inherit autotools
 DEPENDS += "dbus libnl openssl"
-RDEPENDS_${PN} += "libnl openssl"
+RDEPENDS:${PN} += "libnl openssl"
 
 CFLAGS:append = " -I${STAGING_INCDIR}/libnl3/ -I${STAGING_INCDIR}/ -Wno-error=deprecated-declarations"
 LDFLAGS:append = " -L${STAGING_LIBDIR}/"
@@ -34,11 +34,10 @@ EXTRA_OEMAKE = "'LIBDIR=${libdir}' 'INCDIR=${includedir}' 'BINDIR=${sbindir}'"
 do_configure() {
     cp ./defconfig ./.config
     sed -i 's/^#CONFIG_CTRL_IFACE_DBUS_NEW=y/CONFIG_CTRL_IFACE_DBUS_NEW=y/' .config
-    sed -i 's/install -D wpa_passphrase $(DESTDIR)\/$(BINDIR)\/wpa_passphrase/install -D wpa_passphrase_s1g $(DESTDIR)\/$(BINDIR)\/wpa_passphrase_s1g/' Makefile
 }
 
 do_compile() {
-    oe_runmake MORSE_VERSION=rel_1_15_3_2025_Apr_16 -C .
+    oe_runmake MORSE_VERSION=rel_mm8108_2_1_0_2026_Jul_01 -C .
 }
 
 do_install() {
@@ -69,5 +68,8 @@ do_install() {
 
     oe_runmake install
 }
+
+SYSTEMD_SERVICE:${PN} = "wpa_supplicant_s1g.service"
+SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 FILES:${PN} += "${datadir}/dbus-1/system-services/* ${systemd_system_unitdir}/*"

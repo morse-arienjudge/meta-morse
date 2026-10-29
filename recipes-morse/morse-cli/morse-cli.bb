@@ -1,6 +1,6 @@
 DESCRIPTION = "Build and install Morse Command Line"
 
-TAG_NAME = "1.15.3"
+TAG_NAME = "mm8108-2.1.0"
 PV = "${TAG_NAME}+git${SRCPV}"
 SRC_URI = "git://github.com/MorseMicro/morse_cli.git;protocol=https;branch=main;tag=${TAG_NAME}"
 
@@ -12,8 +12,7 @@ inherit autotools
 DEPENDS += "libnl libusb1"
 RDEPENDS_${PN} += "libnl libusb1"
 
-# Ignore warning due to bug in c code (temp)
-CFLAGS:append = " -I${STAGING_INCDIR}/libnl3/ -Wno-unused-result -I${STAGING_INCDIR}/libusb-1.0" 
+CFLAGS:append = " -I${STAGING_INCDIR}/libnl3/ -Wno-unused-result -Wno-maybe-uninitialized -I${STAGING_INCDIR}/libusb-1.0" 
 LDFLAGS:append = " -L${STAGING_LIBDIR}/ -lnl-3 -lnl-genl-3 -lusb-1.0"
 
 S = "${WORKDIR}/git"
