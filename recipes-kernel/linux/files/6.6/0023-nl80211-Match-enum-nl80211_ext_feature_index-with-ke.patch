@@ -1,0 +1,45 @@
+From 122681af5298c61f38569383c98fa476e724d257 Mon Sep 17 00:00:00 2001
+From: Wonseok Kim <wonseok.kim@morsemicro.com>
+Date: Wed, 26 Feb 2025 17:03:54 +1100
+Subject: [PATCH] nl80211: Match enum nl80211_ext_feature_index with kernel
+ v6.7
+
+This adds OWE offload support.
+---
+ include/uapi/linux/nl80211.h | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/include/uapi/linux/nl80211.h b/include/uapi/linux/nl80211.h
+index 88eb85c63029..3cceac2f9916 100644
+--- a/include/uapi/linux/nl80211.h
++++ b/include/uapi/linux/nl80211.h
+@@ -6400,6 +6400,12 @@ enum nl80211_feature_flags {
+  *	in authentication and deauthentication frames sent to unassociated peer
+  *	using @NL80211_CMD_FRAME.
+  *
++ * @NL80211_EXT_FEATURE_OWE_OFFLOAD: Driver/Device wants to do OWE DH IE
++ *	handling in station mode.
++ *
++ * @NL80211_EXT_FEATURE_OWE_OFFLOAD_AP: Driver/Device wants to do OWE DH IE
++ *	handling in AP mode.
++ *
+  * @NUM_NL80211_EXT_FEATURES: number of extended features.
+  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
+  */
+@@ -6471,12 +6477,16 @@ enum nl80211_ext_feature_index {
+ 	NL80211_EXT_FEATURE_PUNCT,
+ 	NL80211_EXT_FEATURE_SECURE_NAN,
+ 	NL80211_EXT_FEATURE_AUTH_AND_DEAUTH_RANDOM_TA,
++	NL80211_EXT_FEATURE_OWE_OFFLOAD,
++	NL80211_EXT_FEATURE_OWE_OFFLOAD_AP,
+ 
+ 	/* add new features before the definition below */
+ 	NUM_NL80211_EXT_FEATURES,
+ 	MAX_NL80211_EXT_FEATURES = NUM_NL80211_EXT_FEATURES - 1
+ };
+ 
++#define HAS_NL80211_EXT_FEATURE_OWE_OFFLOAD
++
+ /**
+  * enum nl80211_probe_resp_offload_support_attr - optional supported
+  *	protocols for probe-response offloading by the driver/FW.

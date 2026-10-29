@@ -1,7 +1,7 @@
-From c8698448b4d853ae148beabe26d23ba2f577d763 Mon Sep 17 00:00:00 2001
+From d74aa56bc51441bc9938baf517219bc7a1cbc9ed Mon Sep 17 00:00:00 2001
 From: Carlos Song <carlos.song@nxp.com>
 Date: Wed, 11 Jun 2025 16:29:53 +0800
-Subject: [PATCH 13/15] LF-15429: spi: imx: add dynamic burst for spi sdma mode
+Subject: [PATCH] LF-15429: spi: imx: add dynamic burst for spi sdma mode
 
 In sdma mode, ecspi transfer one word in one frame, so clk delay will be
 found between every word. A performance improvement is needed.
@@ -35,7 +35,7 @@ Signed-off-by: Carlos Song <carlos.song@nxp.com>
  1 file changed, 300 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
-index 9b1fe2a7d63c..6c59dee0b18b 100644
+index 43b0834ecd2f..81ebf4ce7fc3 100644
 --- a/drivers/spi/spi-imx.c
 +++ b/drivers/spi/spi-imx.c
 @@ -36,6 +36,10 @@ module_param(polling_limit_us, uint, 0664);
@@ -369,7 +369,7 @@ index 9b1fe2a7d63c..6c59dee0b18b 100644
  static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
  				struct spi_transfer *transfer)
  {
-@@ -1662,8 +1954,12 @@ static int spi_imx_transfer_one(struct spi_controller *controller,
+@@ -1665,8 +1957,12 @@ static int spi_imx_transfer_one(struct spi_controller *controller,
  	 * transfer, the SPI transfer has already been mapped, so we
  	 * have to do the DMA transfer here.
  	 */
@@ -384,6 +384,3 @@ index 9b1fe2a7d63c..6c59dee0b18b 100644
  	/*
  	 * Calculate the estimated time in us the transfer runs. Find
  	 * the number of Hz per byte per polling limit.
--- 
-2.25.1
-

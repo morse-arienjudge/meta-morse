@@ -1,7 +1,7 @@
-From 8d5f1b326eb7c6f4812894c2b362abc245dec949 Mon Sep 17 00:00:00 2001
+From 14feb1e5aa8dc5c0932ed0f57645eada4b6e49f8 Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:06 +1100
-Subject: [PATCH 02/14] mac80211: tx s1g AP ecsa support
+Subject: [PATCH] mac80211: tx s1g AP ecsa support
 
 Update the AP-side MLME to consider short beacons in channel switch time
 calculations, which includes an ECSA IE only in DTIM beacons. ECSA countdown
@@ -16,10 +16,10 @@ interval. Impact on the ECSA functionality can be mitigated when combined with
  1 file changed, 9 insertions(+), 3 deletions(-)
 
 diff --git a/net/mac80211/tx.c b/net/mac80211/tx.c
-index 5c6c5254d987..abc01c1c7e06 100644
+index 5ea7572aae3d..9c94add7edfa 100644
 --- a/net/mac80211/tx.c
 +++ b/net/mac80211/tx.c
-@@ -5008,11 +5008,11 @@ static void ieee80211_set_beacon_cntdwn(struct ieee80211_sub_if_data *sdata,
+@@ -5043,11 +5043,11 @@ static void ieee80211_set_beacon_cntdwn(struct ieee80211_sub_if_data *sdata,
  
  static u8 __ieee80211_beacon_update_cntdwn(struct beacon_data *beacon)
  {
@@ -33,7 +33,7 @@ index 5c6c5254d987..abc01c1c7e06 100644
  	return beacon->cntdwn_current_counter;
  }
  
-@@ -5264,7 +5264,13 @@ ieee80211_beacon_get_ap(struct ieee80211_hw *hw,
+@@ -5299,7 +5299,13 @@ ieee80211_beacon_get_ap(struct ieee80211_hw *hw,
  	u16 csa_off_base = 0;
  	int mbssid_len;
  
@@ -48,6 +48,3 @@ index 5c6c5254d987..abc01c1c7e06 100644
  		if (!is_template)
  			ieee80211_beacon_update_cntdwn(vif);
  
--- 
-2.25.1
-

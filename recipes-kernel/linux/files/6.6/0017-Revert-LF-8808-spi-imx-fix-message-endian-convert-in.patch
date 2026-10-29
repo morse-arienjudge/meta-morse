@@ -1,7 +1,7 @@
-From 982d9501431b8d30eda3e3afbd25e2826f8de2d8 Mon Sep 17 00:00:00 2001
+From 5b9fefe133060215097df73022b1a59d3c37cc35 Mon Sep 17 00:00:00 2001
 From: Arien Judge <arien.judge@morsemicro.com>
 Date: Thu, 26 Jun 2025 12:57:09 +1000
-Subject: [PATCH 11/15] Revert "LF-8808 spi: imx: fix message endian convert in
+Subject: [PATCH] Revert "LF-8808 spi: imx: fix message endian convert in
  target dma tx buffer"
 
 This reverts commit 74f4e466ff42275f990367ca553d670b0c97b2e9.
@@ -10,7 +10,7 @@ This reverts commit 74f4e466ff42275f990367ca553d670b0c97b2e9.
  1 file changed, 4 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
-index 9087d09b7d9c..1eb32392506c 100644
+index 8e827df89617..6bf7f9c8fd95 100644
 --- a/drivers/spi/spi-imx.c
 +++ b/drivers/spi/spi-imx.c
 @@ -632,12 +632,6 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
@@ -37,6 +37,3 @@ index 9087d09b7d9c..1eb32392506c 100644
  		if (!xfer->speed_hz)
  			continue;
  		min_speed_hz = min(xfer->speed_hz, min_speed_hz);
--- 
-2.25.1
-

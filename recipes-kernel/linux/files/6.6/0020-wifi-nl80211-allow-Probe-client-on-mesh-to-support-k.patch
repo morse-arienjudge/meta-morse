@@ -1,0 +1,44 @@
+From 494ed7c8f01d24d4e0fe61483a982049ed1fa0f6 Mon Sep 17 00:00:00 2001
+From: Pradeep Reddy <pradeep.reddy@morsemicro.com>
+Date: Mon, 13 Jul 2026 18:15:18 +1000
+Subject: [PATCH] wifi: nl80211: allow Probe client on mesh to support
+ keepalive
+
+Allow probe client on mesh interfaces to support keepalive
+NL80211_CMD_PROBE_CLIENT is used by hostapd to transmit a
+QoS NULL data frame to idle stations as a keepalive
+before declaring them inactive. This is currently supported
+only for AP and P2P GO interface types.
+
+In 802.11s mesh deployments, hostapd applies the same
+keepalive logic to mesh peer nodes. But, nl80211 currently
+rejects probe client requests on NL80211_IFTYPE_MESH_POINT
+interfaces, returning -EOPNOTSUPP.
+
+When probe client requests for mesh peers are rejected:
+hostapd fails to send QoS NULL frames to idle mesh peers.
+The failure is interpreted as lack of peer responsiveness
+This triggers unnecessary timeouts and peer reconnections
+
+Extend the interface type validation in probe_client()
+to allow NL80211_IFTYPE_MESH_POINT, enabling probe client
+operations on mesh interfaces. Allows hostapd to perform
+keepalive probing for idle mesh peers.
+---
+ net/wireless/nl80211.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index 197160b1a286..f7b9e764ab1c 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -14212,7 +14212,8 @@ static int nl80211_probe_client(struct sk_buff *skb,
+ 	int err;
+ 
+ 	if (wdev->iftype != NL80211_IFTYPE_AP &&
+-	    wdev->iftype != NL80211_IFTYPE_P2P_GO)
++	    wdev->iftype != NL80211_IFTYPE_P2P_GO &&
++	    wdev->iftype != NL80211_IFTYPE_MESH_POINT)
+ 		return -EOPNOTSUPP;
+ 
+ 	if (!info->attrs[NL80211_ATTR_MAC])

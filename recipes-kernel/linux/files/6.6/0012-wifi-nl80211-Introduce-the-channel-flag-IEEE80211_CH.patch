@@ -1,7 +1,7 @@
-From e9651d52b9581f281e0eda98c5d23e317ba4470d Mon Sep 17 00:00:00 2001
+From 6f2ec6f2baa5979209259f8267f2c2b60a79e22c Mon Sep 17 00:00:00 2001
 From: Andrew Pope <andrew.pope@morsemicro.com>
 Date: Fri, 20 Jun 2025 17:53:09 +1000
-Subject: [PATCH 12/14] wifi: nl80211: Introduce the channel flag
+Subject: [PATCH] wifi: nl80211: Introduce the channel flag
  IEEE80211_CHAN_IGNORE for BCF disabled channels
 
 In this changeset a a new flag IEEE80211_CHAN_IGNORE, which gets applied to BCF-disabled
@@ -25,7 +25,7 @@ Approved-by: Joshua Wilkinson
  2 files changed, 7 insertions(+)
 
 diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index 802ea3080d0b..80ff050950f5 100644
+index 5b3a63c377d6..41e750fe5aa3 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
 @@ -115,6 +115,9 @@ struct wiphy;
@@ -47,10 +47,10 @@ index 802ea3080d0b..80ff050950f5 100644
  
  #define IEEE80211_CHAN_NO_HT40 \
 diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
-index c4f08f7eb741..6eafce3a575a 100644
+index 545f7ecaad76..197160b1a286 100644
 --- a/net/wireless/nl80211.c
 +++ b/net/wireless/nl80211.c
-@@ -1118,6 +1118,9 @@ static int nl80211_msg_put_channel(struct sk_buff *msg, struct wiphy *wiphy,
+@@ -1124,6 +1124,9 @@ static int nl80211_msg_put_channel(struct sk_buff *msg, struct wiphy *wiphy,
  	if ((chan->flags & IEEE80211_CHAN_DISABLED) &&
  	    nla_put_flag(msg, NL80211_FREQUENCY_ATTR_DISABLED))
  		goto nla_put_failure;
@@ -60,6 +60,3 @@ index c4f08f7eb741..6eafce3a575a 100644
  	if (chan->flags & IEEE80211_CHAN_NO_IR) {
  		if (nla_put_flag(msg, NL80211_FREQUENCY_ATTR_NO_IR))
  			goto nla_put_failure;
--- 
-2.25.1
-

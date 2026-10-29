@@ -1,0 +1,25 @@
+From cac0017804427441bea9e5605accb19ef1e788cb Mon Sep 17 00:00:00 2001
+From: Lewis O'Flynn <lewis.oflynn@morsemicro.com>
+Date: Sat, 2 May 2026 07:18:28 +1000
+Subject: [PATCH] cfg80211: add preprocessor flag to communicate existence of
+ CHAN_IGNORE patch
+
+To facilitate compiling the morse_driver on unpatched kernels, a preprocessor flag
+is introduced to cfg80211 to communicate the existence of CHAN_IGNORE.
+---
+ include/net/cfg80211.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
+index 41e750fe5aa3..af5521387156 100644
+--- a/include/net/cfg80211.h
++++ b/include/net/cfg80211.h
+@@ -144,6 +144,8 @@ enum ieee80211_channel_flags {
+ 	IEEE80211_CHAN_IGNORE		= 1<<21,
+ };
+ 
++#define HAS_IEEE80211_CHAN_IGNORE
++
+ #define IEEE80211_CHAN_NO_HT40 \
+ 	(IEEE80211_CHAN_NO_HT40PLUS | IEEE80211_CHAN_NO_HT40MINUS)
+ 

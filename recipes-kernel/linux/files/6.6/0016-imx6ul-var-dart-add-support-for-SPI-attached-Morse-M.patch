@@ -1,8 +1,8 @@
-From 911cbd384fc833f1a02796e7332edc698d10dcd1 Mon Sep 17 00:00:00 2001
+From 5b1b5d1e9fd4753195ad185f3bc9c0f44508a4ff Mon Sep 17 00:00:00 2001
 From: Arien Judge <arien.judge@morsemicro.com>
 Date: Thu, 26 Jun 2025 12:30:06 +1000
-Subject: [PATCH 10/15] imx6ul-var-dart: add support for SPI attached Morse
- Micro MM6108
+Subject: [PATCH] imx6ul-var-dart: add support for SPI attached Morse Micro
+ MM6108
 
 uses pins on J11 and J7 of the DART-6UL-Customboard to connect to a
 Morse Micro MF08651
@@ -116,6 +116,3 @@ index f4540c5951bd..7a5af5f89164 100644
 +	};
 +};
 \ No newline at end of file
--- 
-2.25.1
-

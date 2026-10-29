@@ -1,0 +1,30 @@
+From aa6b68e94be808817a2171e6f0b682b694926478 Mon Sep 17 00:00:00 2001
+From: Ria Polly Thomas <ria.thomas@morsemicro.com>
+Date: Sat, 2 May 2026 08:02:33 +1000
+Subject: [PATCH] mac80211: return RX_QUEUED in 6.6+ to resolve multi-hop
+ failures
+
+During mesh multihop testing with 3 nodes random crashes was observed
+on the middle node. The rx path where the mesh next hop path resolution
+and packet dropping decision is made was changed in newer kernel
+versions.
+
+Approved-by: Pradeep Reddy
+Approved-by: Sagar Bussa
+---
+ net/mac80211/rx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/net/mac80211/rx.c b/net/mac80211/rx.c
+index 070823b7758b..346d7542bc88 100644
+--- a/net/mac80211/rx.c
++++ b/net/mac80211/rx.c
+@@ -2949,7 +2949,7 @@ ieee80211_rx_mesh_data(struct ieee80211_sub_if_data *sdata, struct sta_info *sta
+ 		IEEE80211_IFSTA_MESH_CTR_INC(ifmsh, fwded_unicast);
+ 	} else {
+ 		/* skb queued: don't free */
+-		return RX_DROP_MONITOR;
++		return RX_QUEUED;
+ 	}
+ 
+ 	IEEE80211_IFSTA_MESH_CTR_INC(ifmsh, fwded_frames);

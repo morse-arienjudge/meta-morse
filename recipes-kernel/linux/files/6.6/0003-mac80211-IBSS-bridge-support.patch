@@ -1,7 +1,7 @@
-From 3804ca8ec2675fbfe96c6f7fded7f91918d8887c Mon Sep 17 00:00:00 2001
+From 89c5cc4676fb37888c5685deabd06af88deff532 Mon Sep 17 00:00:00 2001
 From: Ria Thomas <ria.thomas@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:07 +1100
-Subject: [PATCH 03/14] mac80211: IBSS bridge support
+Subject: [PATCH] mac80211: IBSS bridge support
 
 With the addition of BATMAN routing protocol, an IBSS (ad hoc) interface
 can be bridged with Ethernet intefaces. Add bridge mode support for IBSS
@@ -14,10 +14,10 @@ Morse Micro note: This commit is required if IBSS is used.
  2 files changed, 2 insertions(+), 3 deletions(-)
 
 diff --git a/net/wireless/core.c b/net/wireless/core.c
-index ff743e1f2e2c..df48f611ca30 100644
+index 800fbfd59194..b4b154ebce9d 100644
 --- a/net/wireless/core.c
 +++ b/net/wireless/core.c
-@@ -1394,8 +1394,8 @@ void cfg80211_init_wdev(struct wireless_dev *wdev)
+@@ -1404,8 +1404,8 @@ void cfg80211_init_wdev(struct wireless_dev *wdev)
  	wdev->ps_timeout = -1;
  
  	if ((wdev->iftype == NL80211_IFTYPE_STATION ||
@@ -29,10 +29,10 @@ index ff743e1f2e2c..df48f611ca30 100644
  
  	INIT_WORK(&wdev->disconnect_wk, cfg80211_autodisconnect_wk);
 diff --git a/net/wireless/util.c b/net/wireless/util.c
-index 9aa7bdce20b2..3d78a753fe29 100644
+index 640ec502e82d..2c26d01618b6 100644
 --- a/net/wireless/util.c
 +++ b/net/wireless/util.c
-@@ -1184,7 +1184,6 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
+@@ -1232,7 +1232,6 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
  			fallthrough;
  		case NL80211_IFTYPE_OCB:
  		case NL80211_IFTYPE_P2P_CLIENT:
@@ -40,6 +40,3 @@ index 9aa7bdce20b2..3d78a753fe29 100644
  			dev->priv_flags |= IFF_DONT_BRIDGE;
  			break;
  		case NL80211_IFTYPE_P2P_GO:
--- 
-2.25.1
-

@@ -1,8 +1,8 @@
-From bac83cb1b678ec8e3b1bace059fc495de21f41e9 Mon Sep 17 00:00:00 2001
+From adff7c647b82332ce931b61ece4bdac8fa17fdd5 Mon Sep 17 00:00:00 2001
 From: Arien Judge <arien.judge@morsemicro.com>
 Date: Sat, 21 Jun 2025 04:07:38 +1000
-Subject: [PATCH 13/14] Revert "Revert "pinctrl-bcm2835: Set base to 0 give
- expected gpio numbering""
+Subject: [PATCH] Revert "Revert "pinctrl-bcm2835: Set base to 0 give expected
+ gpio numbering""
 
 This reverts commit ddad64688bcf59cd5555bc6040ac1f795d8a73cc.
 ---
@@ -10,7 +10,7 @@ This reverts commit ddad64688bcf59cd5555bc6040ac1f795d8a73cc.
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/pinctrl/bcm/pinctrl-bcm2835.c b/drivers/pinctrl/bcm/pinctrl-bcm2835.c
-index 1489191a213f..78d04b37d905 100644
+index 8f3470d576e4..296033588e4a 100644
 --- a/drivers/pinctrl/bcm/pinctrl-bcm2835.c
 +++ b/drivers/pinctrl/bcm/pinctrl-bcm2835.c
 @@ -391,7 +391,7 @@ static const struct gpio_chip bcm2835_gpio_chip = {
@@ -31,6 +31,3 @@ index 1489191a213f..78d04b37d905 100644
  	.ngpio = BCM2711_NUM_GPIOS,
  	.can_sleep = false,
  	.add_pin_ranges = bcm2835_add_pin_ranges_fallback,
--- 
-2.25.1
-

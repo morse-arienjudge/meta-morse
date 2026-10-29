@@ -1,0 +1,86 @@
+From 36294130082515024fde6843e70d3ce7dbc4199d Mon Sep 17 00:00:00 2001
+From: Pradeep Reddy <pradeep.reddy@morsemicro.com>
+Date: Mon, 13 Jul 2026 18:27:08 +1000
+Subject: [PATCH] wifi: mac80211: rectify ping delay MP to mesh gate after idle
+ period
+
+When a mesh node needs to communicate with a device behind a
+mesh gate (e.g. a bridge interface), it learns the bridge MAC
+via ARP and creates a proxy path (MPP) entry.
+
+After the default expiry time (10 min), the MPP entry is removed,
+but the ARP entry remains valid for longer. If the mesh node then
+tries to send data to the bridge MAC, it launches HWMP path
+discovery (PREQ) to the bridge MAC, which is not a mesh STA. No PREP
+is received causing 9 seconds of packet loss and delay until ARP is
+retried and the proxy entry is recreated.
+
+Halve the retries when a gate is present and fall back to full number
+of maximum retries. Also restore the number of retries to the default.
+---
+ net/mac80211/mesh_hwmp.c | 31 +++++++++++++++++++++++--------
+ net/wireless/mesh.c      |  2 +-
+ 2 files changed, 24 insertions(+), 9 deletions(-)
+
+diff --git a/net/mac80211/mesh_hwmp.c b/net/mac80211/mesh_hwmp.c
+index f070bca4f548..deeec6eed394 100644
+--- a/net/mac80211/mesh_hwmp.c
++++ b/net/mac80211/mesh_hwmp.c
+@@ -1344,7 +1344,7 @@ void mesh_path_refresh(struct ieee80211_sub_if_data *sdata,
+ 	   (!addr || ether_addr_equal(sdata->vif.addr, addr)))
+ 		mesh_queue_preq(mpath, PREQ_Q_F_START | PREQ_Q_F_REFRESH);
+ 
+-	if (hwmp_is_mpath_optimal(mpath)) {
++	if (hwmp_is_mpath_optimal(mpath) && mpath->hop_count == 1) {
+ 		/* Refresh path, if path is being actively used & optimal */
+ 		unsigned long exp_time =
+ 			msecs_to_jiffies(sdata->u.mesh.mshcfg.dot11MeshHWMPactivePathTimeout);
+@@ -1410,13 +1410,28 @@ void mesh_path_timer(struct timer_list *t)
+ 		mpath->flags &= ~(MESH_PATH_RESOLVING | MESH_PATH_RESOLVED);
+ 		spin_unlock_bh(&mpath->state_lock);
+ 	} else if (mpath->discovery_retries < max_preq_retries(sdata)) {
+-		++mpath->discovery_retries;
+-		mpath->discovery_timeout = min(mpath->discovery_timeout * 2,
+-			msecs_to_jiffies(MESH_MAX_MPATH_DISCOVERY_TIMEOUT));
+-		mpath->flags &= ~MESH_PATH_REQ_QUEUED;
+-		spin_unlock_bh(&mpath->state_lock);
+-		mesh_queue_preq(mpath, PREQ_Q_F_REFRESH);
+-	} else {
++        mpath->discovery_retries++;
++        /* Fast fallback to gate */
++        if (!mpath->is_gate && mesh_gate_num(sdata) > 0 &&
++            mpath->discovery_retries >= max_preq_retries(sdata) / 2) {
++            mpath->flags &= ~(MESH_PATH_RESOLVING |
++                            MESH_PATH_RESOLVED |
++                            MESH_PATH_REQ_QUEUED);
++            mpath->exp_time = jiffies;
++            spin_unlock_bh(&mpath->state_lock);
++
++            ret = mesh_path_send_to_gates(mpath);
++            if (ret)
++                mhwmp_dbg(sdata, "Fast fallback: no gate was reachable\n");
++            return;
++        }
++        /* Continue retrying PREQ */
++        mpath->discovery_timeout = min(mpath->discovery_timeout * 2,
++                            msecs_to_jiffies(MESH_MAX_MPATH_DISCOVERY_TIMEOUT));
++        mpath->flags &= ~MESH_PATH_REQ_QUEUED;
++        spin_unlock_bh(&mpath->state_lock);
++        mesh_queue_preq(mpath, PREQ_Q_F_REFRESH);
++    } else {
+ 		mpath->flags &= ~(MESH_PATH_RESOLVING |
+ 				  MESH_PATH_RESOLVED |
+ 				  MESH_PATH_REQ_QUEUED);
+diff --git a/net/wireless/mesh.c b/net/wireless/mesh.c
+index 317d03ebc657..49d4cfd7c213 100644
+--- a/net/wireless/mesh.c
++++ b/net/wireless/mesh.c
+@@ -46,7 +46,7 @@
+ /* Default maximum number of established plinks per interface */
+ #define MESH_MAX_ESTAB_PLINKS	32
+ 
+-#define MESH_MAX_PREQ_RETRIES	6
++#define MESH_MAX_PREQ_RETRIES	4
+ 
+ #define MESH_SYNC_NEIGHBOR_OFFSET_MAX 50
+ 

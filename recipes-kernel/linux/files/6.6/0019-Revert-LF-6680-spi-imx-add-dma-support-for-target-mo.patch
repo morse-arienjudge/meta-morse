@@ -1,8 +1,7 @@
-From 58e1e0ddd07629c21f714091d343b8bc5c3e5460 Mon Sep 17 00:00:00 2001
+From 85d3d1b98b0a4db122207e5973fc9bb3a4dd7c53 Mon Sep 17 00:00:00 2001
 From: Arien Judge <arien.judge@morsemicro.com>
 Date: Thu, 26 Jun 2025 12:57:25 +1000
-Subject: [PATCH 12/15] Revert "LF-6680 spi: imx: add dma support for target
- mode"
+Subject: [PATCH] Revert "LF-6680 spi: imx: add dma support for target mode"
 
 This reverts commit 1aef8ed632a10f0fd11895d1c482dc3815dc9248.
 ---
@@ -10,7 +9,7 @@ This reverts commit 1aef8ed632a10f0fd11895d1c482dc3815dc9248.
  1 file changed, 32 insertions(+), 138 deletions(-)
 
 diff --git a/drivers/spi/spi-imx.c b/drivers/spi/spi-imx.c
-index 1eb32392506c..9b1fe2a7d63c 100644
+index 6bf7f9c8fd95..43b0834ecd2f 100644
 --- a/drivers/spi/spi-imx.c
 +++ b/drivers/spi/spi-imx.c
 @@ -241,12 +241,10 @@ static bool spi_imx_can_dma(struct spi_controller *controller, struct spi_device
@@ -241,7 +240,7 @@ index 1eb32392506c..9b1fe2a7d63c 100644
  	}
  
  	return 0;
-@@ -1749,7 +1652,7 @@ static int spi_imx_transfer_one(struct spi_controller *controller,
+@@ -1752,7 +1655,7 @@ static int spi_imx_transfer_one(struct spi_controller *controller,
  	while (spi_imx->devtype_data->rx_available(spi_imx))
  		readl(spi_imx->base + MXC_CSPIRXDATA);
  
@@ -250,7 +249,7 @@ index 1eb32392506c..9b1fe2a7d63c 100644
  		return spi_imx_pio_transfer_target(spi, transfer);
  
  	transfer->effective_speed_hz = spi_imx->spi_bus_clk;
-@@ -1799,7 +1702,6 @@ spi_imx_prepare_message(struct spi_controller *controller, struct spi_message *m
+@@ -1802,7 +1705,6 @@ spi_imx_prepare_message(struct spi_controller *controller, struct spi_message *m
  		return ret;
  	}
  
@@ -258,7 +257,7 @@ index 1eb32392506c..9b1fe2a7d63c 100644
  	ret = spi_imx->devtype_data->prepare_message(spi_imx, msg);
  	if (ret) {
  		pm_runtime_mark_last_busy(spi_imx->dev);
-@@ -1813,14 +1715,6 @@ static int
+@@ -1816,14 +1718,6 @@ static int
  spi_imx_unprepare_message(struct spi_controller *controller, struct spi_message *msg)
  {
  	struct spi_imx_data *spi_imx = spi_controller_get_devdata(controller);
@@ -273,6 +272,3 @@ index 1eb32392506c..9b1fe2a7d63c 100644
  
  	pm_runtime_mark_last_busy(spi_imx->dev);
  	pm_runtime_put_autosuspend(spi_imx->dev);
--- 
-2.25.1
-

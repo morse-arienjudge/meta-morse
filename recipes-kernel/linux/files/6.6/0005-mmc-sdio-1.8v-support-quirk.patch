@@ -1,7 +1,7 @@
-From 1f291884a5a8adf6d70ab9a85154efa79968482e Mon Sep 17 00:00:00 2001
+From 14acebdca20c0204142bcc0ec79a561972965477 Mon Sep 17 00:00:00 2001
 From: Nev Young <neville.young@morsemicro.com>
 Date: Mon, 10 Mar 2025 19:29:11 +1100
-Subject: [PATCH 05/14] mmc: sdio 1.8v support quirk
+Subject: [PATCH] mmc: sdio 1.8v support quirk
 
 MM610x chips do not support the 1.8V bus switch despite advertising
 support when queried by SDIO 3.0 host devices. Introduce a quirk for
@@ -14,10 +14,10 @@ devices.
  3 files changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/mmc/core/quirks.h b/drivers/mmc/core/quirks.h
-index cca71867bc4a..628aa5a5379e 100644
+index 1f7406c0ab03..45034267deb6 100644
 --- a/drivers/mmc/core/quirks.h
 +++ b/drivers/mmc/core/quirks.h
-@@ -183,6 +183,10 @@ static const struct mmc_fixup __maybe_unused sdio_card_init_methods[] = {
+@@ -215,6 +215,10 @@ static const struct mmc_fixup __maybe_unused sdio_card_init_methods[] = {
  			      MMC_QUIRK_BROKEN_BYTE_MODE_512 |
  			      MMC_QUIRK_LENIENT_FN0 |
  			      MMC_QUIRK_BLKSZ_FOR_BYTE_MODE),
@@ -29,10 +29,10 @@ index cca71867bc4a..628aa5a5379e 100644
  	END_FIXUP
  };
 diff --git a/drivers/mmc/core/sdio.c b/drivers/mmc/core/sdio.c
-index 5914516df2f7..eff83e91ecbe 100644
+index 7a549c006ab9..22f3fdc397de 100644
 --- a/drivers/mmc/core/sdio.c
 +++ b/drivers/mmc/core/sdio.c
-@@ -737,7 +737,7 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
+@@ -739,7 +739,7 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
  	 * try to init uhs card. sdio_read_cccr will take over this task
  	 * to make sure which speed mode should work.
  	 */
@@ -42,18 +42,15 @@ index 5914516df2f7..eff83e91ecbe 100644
  		if (err == -EAGAIN) {
  			mmc_sdio_pre_init(host, ocr_card, card);
 diff --git a/include/linux/mmc/card.h b/include/linux/mmc/card.h
-index 7b12eebc5586..01ce5eb7eaff 100644
+index d9fbd389dce2..0a7dd7dc5111 100644
 --- a/include/linux/mmc/card.h
 +++ b/include/linux/mmc/card.h
-@@ -296,6 +296,8 @@ struct mmc_card {
- #define MMC_QUIRK_BROKEN_SD_DISCARD	(1<<14)	/* Disable broken SD discard support */
- #define MMC_QUIRK_BROKEN_SD_CACHE	(1<<15)	/* Disable broken SD cache support */
- #define MMC_QUIRK_BROKEN_CACHE_FLUSH	(1<<16)	/* Don't flush cache until the write has occurred */
-+#define MMC_QUIRK_NO_18V   (1<<17)     /* Ignore voltage negotiation and don't use 1.8v */
+@@ -299,6 +299,8 @@ struct mmc_card {
+ #define MMC_QUIRK_BROKEN_SD_POWEROFF_NOTIFY	(1<<17) /* Disable broken SD poweroff notify support */
+ #define MMC_QUIRK_NO_UHS_DDR50_TUNING	(1<<18) /* Disable DDR50 tuning */
+ #define MMC_QUIRK_FIXED_SECURE_ERASE_TRIM_TIME	(1<<20) /* Secure erase/trim time is fixed regardless of size */
++#define MMC_QUIRK_NO_18V   (1<<21)     /* Ignore voltage negotiation and don't use 1.8v */
 +#define MMC_QUIRK_ERASE_BROKEN	(1<<31)		/* Skip erase */
  
  	bool			written_flag;	/* Indicates eMMC has been written since power on */
  	bool			reenable_cmdq;	/* Re-enable Command Queue */
--- 
-2.25.1
-

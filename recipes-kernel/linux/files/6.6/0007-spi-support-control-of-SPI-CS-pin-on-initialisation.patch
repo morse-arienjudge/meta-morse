@@ -1,7 +1,7 @@
-From 7fece3fe5aa9b3c3966f332674e57bf034db7317 Mon Sep 17 00:00:00 2001
+From 93bf36dfde8d2d61ec0b6aee441a475f852e1aef Mon Sep 17 00:00:00 2001
 From: Sagar Bussa <sagar.bussa@morsemicro.com>
 Date: Thu, 13 Mar 2025 20:50:20 +1100
-Subject: [PATCH 07/14] spi: support control of SPI CS pin on initialisation
+Subject: [PATCH] spi: support control of SPI CS pin on initialisation
 
 The Linux kernel as dropped legacy GPIO support and starting using a
 GPIO descriptor based interface for chip select line handling from
@@ -17,10 +17,10 @@ select high in during spi_setup.
  2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
-index 7ff6091ef76c..38e0ed769bb0 100644
+index cb8297b87bd0..30828c307061 100644
 --- a/drivers/spi/spi.c
 +++ b/drivers/spi/spi.c
-@@ -983,7 +983,8 @@ static void spi_set_cs(struct spi_device *spi, bool enable, bool force)
+@@ -995,7 +995,8 @@ static void spi_set_cs(struct spi_device *spi, bool enable, bool force)
  				gpiod_set_value_cansleep(spi_get_csgpiod(spi, 0), !enable);
  			else
  				/* Polarity handled by GPIO library */
@@ -30,7 +30,7 @@ index 7ff6091ef76c..38e0ed769bb0 100644
  		}
  		/* Some SPI masters need both GPIO CS & slave_select */
  		if ((spi->controller->flags & SPI_CONTROLLER_GPIO_SS) &&
-@@ -3759,7 +3760,8 @@ int spi_setup(struct spi_device *spi)
+@@ -3761,7 +3762,8 @@ static int __spi_setup(struct spi_device *spi, bool initial_setup)
  		return -EINVAL;
  
  	if (ctlr->use_gpio_descriptors && ctlr->cs_gpiods &&
@@ -41,7 +41,7 @@ index 7ff6091ef76c..38e0ed769bb0 100644
  			"setup: forcing CS_HIGH (use_gpio_descriptors)\n");
  		spi->mode |= SPI_CS_HIGH;
 diff --git a/include/linux/spi/spi.h b/include/linux/spi/spi.h
-index 8cc7a99927f9..0d8a660f2f33 100644
+index e5baf43bcfbb..9f3312591cd2 100644
 --- a/include/linux/spi/spi.h
 +++ b/include/linux/spi/spi.h
 @@ -568,6 +568,13 @@ struct spi_controller {
@@ -58,6 +58,3 @@ index 8cc7a99927f9..0d8a660f2f33 100644
  	/* Flag indicating if the allocation of this struct is devres-managed */
  	bool			devm_allocated;
  
--- 
-2.25.1
-

@@ -1,7 +1,7 @@
-From 69283c181040406bd9d594e47e38542343983f84 Mon Sep 17 00:00:00 2001
+From 67eebd62e7ac6d17880ddbf5ceb224b05ce0b98a Mon Sep 17 00:00:00 2001
 From: Liam Kearney <liam.kearney@morsemicro.com>
 Date: Thu, 13 Mar 2025 01:36:11 +1100
-Subject: [PATCH 08/14] mac80211: implement support for thin LMAC S1G NDP block
+Subject: [PATCH] mac80211: implement support for thin LMAC S1G NDP block
  acknowledgements
 
 This is an optional patch and is only required for Morse Micro's "Thin LMAC
@@ -12,20 +12,20 @@ Morse Micro note: This commit is required if using Thin LMAC firmware.
  include/linux/ieee80211.h  |  3 +++
  include/net/mac80211.h     | 19 +++++++++++++++++--
  net/mac80211/agg-rx.c      | 28 ++++++++++++++++++++--------
- net/mac80211/agg-tx.c      | 31 +++++++++++++++++++++++++++----
+ net/mac80211/agg-tx.c      | 34 +++++++++++++++++++++++++++++-----
  net/mac80211/debugfs.c     |  1 +
  net/mac80211/ht.c          |  6 +++---
  net/mac80211/ieee80211_i.h |  4 ++--
  net/mac80211/iface.c       |  3 +++
  net/mac80211/rx.c          |  8 ++++++--
  net/mac80211/sta_info.h    |  6 +++++-
- 10 files changed, 87 insertions(+), 22 deletions(-)
+ 10 files changed, 89 insertions(+), 23 deletions(-)
 
 diff --git a/include/linux/ieee80211.h b/include/linux/ieee80211.h
-index 2fa186258e35..ac03183788ad 100644
+index 38e3e81b880f..20672b932645 100644
 --- a/include/linux/ieee80211.h
 +++ b/include/linux/ieee80211.h
-@@ -4027,6 +4027,9 @@ enum ieee80211_back_actioncode {
+@@ -4034,6 +4034,9 @@ enum ieee80211_back_actioncode {
  	WLAN_ACTION_ADDBA_REQ = 0,
  	WLAN_ACTION_ADDBA_RESP = 1,
  	WLAN_ACTION_DELBA = 2,
@@ -36,7 +36,7 @@ index 2fa186258e35..ac03183788ad 100644
  
  /* BACK (block-ack) parties */
 diff --git a/include/net/mac80211.h b/include/net/mac80211.h
-index 7c707358d15c..15d8b85c87c9 100644
+index 85d785060e76..1a31d773bbb5 100644
 --- a/include/net/mac80211.h
 +++ b/include/net/mac80211.h
 @@ -127,6 +127,14 @@
@@ -62,7 +62,7 @@ index 7c707358d15c..15d8b85c87c9 100644
  struct device;
  
  /**
-@@ -1408,7 +1417,7 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
+@@ -1412,7 +1421,7 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
   * @RX_FLAG_AMPDU_EOF_BIT_KNOWN: The EOF value is known
   * @RX_FLAG_RADIOTAP_HE: HE radiotap data is present
   *	(&struct ieee80211_radiotap_he, mac80211 will fill in
@@ -71,7 +71,7 @@ index 7c707358d15c..15d8b85c87c9 100644
   *	 - DATA3_DATA_MCS
   *	 - DATA3_DATA_DCM
   *	 - DATA3_CODING
-@@ -1416,7 +1425,7 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
+@@ -1420,7 +1429,7 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
   *	 - DATA5_DATA_BW_RU_ALLOC
   *	 - DATA6_NSTS
   *	 - DATA3_STBC
@@ -80,7 +80,7 @@ index 7c707358d15c..15d8b85c87c9 100644
   *	from the RX info data, so leave those zeroed when building this data)
   * @RX_FLAG_RADIOTAP_HE_MU: HE MU radiotap data is present
   *	(&struct ieee80211_radiotap_he_mu)
-@@ -2680,6 +2689,9 @@ struct ieee80211_txq {
+@@ -2684,6 +2693,9 @@ struct ieee80211_txq {
   * @IEEE80211_HW_MLO_MCAST_MULTI_LINK_TX: Hardware/driver handles transmitting
   *	multicast frames on all links, mac80211 should not do that.
   *
@@ -90,7 +90,7 @@ index 7c707358d15c..15d8b85c87c9 100644
   * @NUM_IEEE80211_HW_FLAGS: number of hardware flags, used for sizing arrays
   */
  enum ieee80211_hw_flags {
-@@ -2737,6 +2749,7 @@ enum ieee80211_hw_flags {
+@@ -2741,6 +2753,7 @@ enum ieee80211_hw_flags {
  	IEEE80211_HW_SUPPORTS_CONC_MON_RX_DECAP,
  	IEEE80211_HW_DETECTS_COLOR_COLLISION,
  	IEEE80211_HW_MLO_MCAST_MULTI_LINK_TX,
@@ -98,7 +98,7 @@ index 7c707358d15c..15d8b85c87c9 100644
  
  	/* keep last, obviously */
  	NUM_IEEE80211_HW_FLAGS
-@@ -3548,6 +3561,7 @@ enum ieee80211_ampdu_mlme_action {
+@@ -3565,6 +3578,7 @@ enum ieee80211_ampdu_mlme_action {
   *	%IEEE80211_AMPDU_TX_OPERATIONAL
   * @amsdu: indicates the peer's ability to receive A-MSDU within A-MPDU.
   *	valid when the action is set to %IEEE80211_AMPDU_TX_OPERATIONAL
@@ -106,7 +106,7 @@ index 7c707358d15c..15d8b85c87c9 100644
   * @timeout: BA session timeout. Valid only when the action is set to
   *	%IEEE80211_AMPDU_RX_START
   */
-@@ -3558,6 +3572,7 @@ struct ieee80211_ampdu_params {
+@@ -3575,6 +3589,7 @@ struct ieee80211_ampdu_params {
  	u16 ssn;
  	u16 buf_size;
  	bool amsdu;
@@ -242,7 +242,7 @@ index c6fa53230450..47327dbcbc90 100644
  free:
  	kfree(elems);
 diff --git a/net/mac80211/agg-tx.c b/net/mac80211/agg-tx.c
-index b6b772685881..d801abb1de95 100644
+index 444edd6364c5..53f7169eb1c2 100644
 --- a/net/mac80211/agg-tx.c
 +++ b/net/mac80211/agg-tx.c
 @@ -59,7 +59,7 @@
@@ -301,19 +301,21 @@ index b6b772685881..d801abb1de95 100644
  	tid_tx = rcu_dereference_protected_tid_tx(sta, tid);
  
  	/*
-@@ -528,7 +539,11 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
- 	sdata = sta->sdata;
+@@ -527,7 +538,12 @@ void ieee80211_tx_ba_session_handle_start(struct sta_info *sta, int tid)
+ 
  	params.ssn = sta->tid_seq[tid] >> 4;
  	ret = drv_ampdu_action(local, sdata, &params);
+-	tid_tx->ssn = params.ssn;
 +
 +	/* driver may clear this flag if it does not want NDP for this session */
 +	tid_tx->ndp = params.ndp;
- 	tid_tx->ssn = params.ssn;
++ 	tid_tx->ssn = params.ssn;
++
 +
  	if (ret == IEEE80211_AMPDU_TX_START_DELAY_ADDBA) {
  		return;
  	} else if (ret == IEEE80211_AMPDU_TX_START_IMMEDIATE) {
-@@ -769,6 +784,7 @@ static void ieee80211_agg_tx_operational(struct ieee80211_local *local,
+@@ -767,6 +783,7 @@ static void ieee80211_agg_tx_operational(struct ieee80211_local *local,
  	tid_tx = rcu_dereference_protected_tid_tx(sta, tid);
  	params.buf_size = tid_tx->buf_size;
  	params.amsdu = tid_tx->amsdu;
@@ -321,7 +323,7 @@ index b6b772685881..d801abb1de95 100644
  
  	ht_dbg(sta->sdata, "Aggregation is on for %pM tid %d\n",
  	       sta->sta.addr, tid);
-@@ -956,7 +972,7 @@ void ieee80211_stop_tx_ba_cb(struct sta_info *sta, int tid,
+@@ -954,7 +971,7 @@ void ieee80211_stop_tx_ba_cb(struct sta_info *sta, int tid,
  		ieee80211_agg_start_txq(sta, tid, false);
  
  	if (send_delba)
@@ -330,7 +332,7 @@ index b6b772685881..d801abb1de95 100644
  			WLAN_BACK_INITIATOR, WLAN_REASON_QSTA_NOT_USE);
  }
  
-@@ -1015,6 +1031,13 @@ void ieee80211_process_addba_resp(struct ieee80211_local *local,
+@@ -1013,6 +1030,13 @@ void ieee80211_process_addba_resp(struct ieee80211_local *local,
  		goto out;
  	}
  
@@ -345,10 +347,10 @@ index b6b772685881..d801abb1de95 100644
  
  	ht_dbg(sta->sdata, "switched off addBA timer for %pM tid %d\n",
 diff --git a/net/mac80211/debugfs.c b/net/mac80211/debugfs.c
-index 207f772bd8ce..a0ab163d0cf0 100644
+index bd7c5dfeaa8c..949f895e6a6a 100644
 --- a/net/mac80211/debugfs.c
 +++ b/net/mac80211/debugfs.c
-@@ -496,6 +496,7 @@ static const char *hw_flag_names[] = {
+@@ -492,6 +492,7 @@ static const char *hw_flag_names[] = {
  	FLAG(SUPPORTS_CONC_MON_RX_DECAP),
  	FLAG(DETECTS_COLOR_COLLISION),
  	FLAG(MLO_MCAST_MULTI_LINK_TX),
@@ -388,10 +390,10 @@ index b3371872895c..b470711bb64c 100644
  	params |= (u16)(tid << 12); 		/* bit 15:12 TID number */
  
 diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
-index 88e1e006ca2c..b2c6148c76fa 100644
+index b85dc41fc1c8..ede6e9f89adb 100644
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
-@@ -2094,7 +2094,7 @@ bool ieee80211_ht_cap_ie_to_sta_ht_cap(struct ieee80211_sub_if_data *sdata,
+@@ -2103,7 +2103,7 @@ bool ieee80211_ht_cap_ie_to_sta_ht_cap(struct ieee80211_sub_if_data *sdata,
  				       const struct ieee80211_ht_cap *ht_cap_ie,
  				       struct link_sta_info *link_sta);
  void ieee80211_send_delba(struct ieee80211_sub_if_data *sdata,
@@ -400,7 +402,7 @@ index 88e1e006ca2c..b2c6148c76fa 100644
  			  u16 initiator, u16 reason_code);
  int ieee80211_send_smps_action(struct ieee80211_sub_if_data *sdata,
  			       enum ieee80211_smps_mode smps, const u8 *da,
-@@ -2109,7 +2109,7 @@ void __ieee80211_stop_rx_ba_session(struct sta_info *sta, u16 tid,
+@@ -2118,7 +2118,7 @@ void __ieee80211_stop_rx_ba_session(struct sta_info *sta, u16 tid,
  void ___ieee80211_start_rx_ba_session(struct sta_info *sta,
  				      u8 dialog_token, u16 timeout,
  				      u16 start_seq_num, u16 ba_policy, u16 tid,
@@ -410,10 +412,10 @@ index 88e1e006ca2c..b2c6148c76fa 100644
  void ieee80211_sta_tear_down_BA_sessions(struct sta_info *sta,
  					 enum ieee80211_agg_stop_reason reason);
 diff --git a/net/mac80211/iface.c b/net/mac80211/iface.c
-index 6e3bfb46af44..a6541c3f4f9c 100644
+index d4a554d6d5de..0bd63a550a5e 100644
 --- a/net/mac80211/iface.c
 +++ b/net/mac80211/iface.c
-@@ -1500,14 +1500,17 @@ static void ieee80211_iface_process_skb(struct ieee80211_local *local,
+@@ -1557,14 +1557,17 @@ static void ieee80211_iface_process_skb(struct ieee80211_local *local,
  		if (sta) {
  			switch (mgmt->u.action.u.addba_req.action_code) {
  			case WLAN_ACTION_ADDBA_REQ:
@@ -432,7 +434,7 @@ index 6e3bfb46af44..a6541c3f4f9c 100644
  							mgmt, len);
  				break;
 diff --git a/net/mac80211/rx.c b/net/mac80211/rx.c
-index 604863cebc19..6f445de1df51 100644
+index b0f975dbdde0..404abf0dbb0a 100644
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
 @@ -1365,7 +1365,7 @@ static void ieee80211_rx_reorder_ampdu(struct ieee80211_rx_data *rx,
@@ -444,7 +446,7 @@ index 604863cebc19..6f445de1df51 100644
  					     WLAN_BACK_RECIPIENT,
  					     WLAN_REASON_QSTA_REQUIRE_SETUP);
  		goto dont_reorder;
-@@ -3209,6 +3209,7 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
+@@ -3212,6 +3212,7 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
  {
  	struct sk_buff *skb = rx->skb;
  	struct ieee80211_bar *bar = (struct ieee80211_bar *)skb->data;
@@ -452,7 +454,7 @@ index 604863cebc19..6f445de1df51 100644
  	struct tid_ampdu_rx *tid_agg_rx;
  	u16 start_seq_num;
  	u16 tid;
-@@ -3235,7 +3236,7 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
+@@ -3238,7 +3239,7 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
  
  		if (!test_bit(tid, rx->sta->ampdu_mlme.agg_session_valid) &&
  		    !test_and_set_bit(tid, rx->sta->ampdu_mlme.unexpected_agg))
@@ -461,7 +463,7 @@ index 604863cebc19..6f445de1df51 100644
  					     WLAN_BACK_RECIPIENT,
  					     WLAN_REASON_QSTA_REQUIRE_SETUP);
  
-@@ -3641,16 +3642,19 @@ ieee80211_rx_h_action(struct ieee80211_rx_data *rx)
+@@ -3649,16 +3650,19 @@ ieee80211_rx_h_action(struct ieee80211_rx_data *rx)
  
  		switch (mgmt->u.action.u.addba_req.action_code) {
  		case WLAN_ACTION_ADDBA_REQ:
@@ -482,7 +484,7 @@ index 604863cebc19..6f445de1df51 100644
  				   sizeof(mgmt->u.action.u.delba)))
  				goto invalid;
 diff --git a/net/mac80211/sta_info.h b/net/mac80211/sta_info.h
-index 195b563132d6..1b513609c660 100644
+index f4af851f45ce..040baf25fe21 100644
 --- a/net/mac80211/sta_info.h
 +++ b/net/mac80211/sta_info.h
 @@ -171,6 +171,7 @@ struct sta_info;
@@ -519,6 +521,3 @@ index 195b563132d6..1b513609c660 100644
  };
  
  /**
--- 
-2.25.1
-

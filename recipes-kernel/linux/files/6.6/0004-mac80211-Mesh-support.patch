@@ -1,7 +1,7 @@
-From f948c7ac54c73e605791f576067cb11ce229e080 Mon Sep 17 00:00:00 2001
+From 37fb0de88d016c7bb295f11ba698214c2c02f93e Mon Sep 17 00:00:00 2001
 From: Pradeep Reddy <pradeep.reddy@morsemicro.com>
 Date: Mon, 10 Mar 2025 18:24:07 +1100
-Subject: [PATCH 04/14] mac80211: Mesh support
+Subject: [PATCH] mac80211: Mesh support
 
 * Add support for the WPA supplicant 'ieee80211w' parameter for Mesh
 interfaces to the cfg80211 module.
@@ -19,10 +19,10 @@ Morse Micro note: This commit is required if mesh is used.
  6 files changed, 32 insertions(+)
 
 diff --git a/net/mac80211/cfg.c b/net/mac80211/cfg.c
-index 505f1d6ccd16..7e43cf5ad465 100644
+index 16270bea49a2..e230992aa728 100644
 --- a/net/mac80211/cfg.c
 +++ b/net/mac80211/cfg.c
-@@ -2091,6 +2091,10 @@ static int ieee80211_add_station(struct wiphy *wiphy, struct net_device *dev,
+@@ -2082,6 +2082,10 @@ static int ieee80211_add_station(struct wiphy *wiphy, struct net_device *dev,
  		return err;
  	}
  
@@ -34,7 +34,7 @@ index 505f1d6ccd16..7e43cf5ad465 100644
  	 * for TDLS and for unassociated station, rate control should be
  	 * initialized only when rates are known and station is marked
 diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
-index fefaa9e902a2..88e1e006ca2c 100644
+index 639268d70f96..b85dc41fc1c8 100644
 --- a/net/mac80211/ieee80211_i.h
 +++ b/net/mac80211/ieee80211_i.h
 @@ -749,6 +749,10 @@ struct ieee80211_if_mesh {
@@ -49,10 +49,10 @@ index fefaa9e902a2..88e1e006ca2c 100644
  
  #ifdef CONFIG_MAC80211_MESH
 diff --git a/net/mac80211/mesh.c b/net/mac80211/mesh.c
-index 7b3ecc288f09..63d3358e1812 100644
+index 0899443e83cd..371753c27f5b 100644
 --- a/net/mac80211/mesh.c
 +++ b/net/mac80211/mesh.c
-@@ -1724,6 +1724,19 @@ void ieee80211_mesh_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
+@@ -1730,6 +1730,19 @@ void ieee80211_mesh_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
  	sdata_unlock(sdata);
  }
  
@@ -93,7 +93,7 @@ index 58c619874ca6..6edc86f91ee7 100644
  
  #endif /* IEEE80211S_H */
 diff --git a/net/mac80211/mesh_hwmp.c b/net/mac80211/mesh_hwmp.c
-index 51369072984e..4c371f202a4c 100644
+index 54930b06c3a4..66722af7f002 100644
 --- a/net/mac80211/mesh_hwmp.c
 +++ b/net/mac80211/mesh_hwmp.c
 @@ -190,6 +190,8 @@ static int mesh_path_sel_frame_tx(enum mpath_frame_type action, u8 flags,
@@ -106,10 +106,10 @@ index 51369072984e..4c371f202a4c 100644
  	return 0;
  }
 diff --git a/net/mac80211/tx.c b/net/mac80211/tx.c
-index abc01c1c7e06..2b290c228bb5 100644
+index 9c94add7edfa..7c33eebf3608 100644
 --- a/net/mac80211/tx.c
 +++ b/net/mac80211/tx.c
-@@ -4288,6 +4288,12 @@ void __ieee80211_subif_start_xmit(struct sk_buff *skb,
+@@ -4320,6 +4320,12 @@ void __ieee80211_subif_start_xmit(struct sk_buff *skb,
  		if (fast_tx &&
  		    ieee80211_xmit_fast(sdata, sta, fast_tx, skb))
  			goto out;
@@ -122,6 +122,3 @@ index abc01c1c7e06..2b290c228bb5 100644
  	}
  
  	/* the frame could be fragmented, software-encrypted, and other
--- 
-2.25.1
-
